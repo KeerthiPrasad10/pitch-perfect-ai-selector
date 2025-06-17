@@ -11,7 +11,7 @@ interface SearchFilterProps {
 }
 
 const categories = [
-  { value: "", label: "All Categories" },
+  { value: "all", label: "All Categories" },
   { value: "automation", label: "Process Automation" },
   { value: "analytics", label: "Data Analytics" },
   { value: "customer-service", label: "Customer Service" },

@@ -7,7 +7,7 @@ interface IndustrySelectorProps {
 }
 
 const industries = [
-  { value: "", label: "All Industries" },
+  { value: "all", label: "All Industries" },
   { value: "healthcare", label: "Healthcare & Life Sciences" },
   { value: "finance", label: "Financial Services" },
   { value: "retail", label: "Retail & E-commerce" },

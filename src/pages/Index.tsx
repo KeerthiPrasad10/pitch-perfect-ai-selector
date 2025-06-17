@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Briefcase, ChartBar, BadgeDollarSign } from "lucide-react";
 
 const Index = () => {
-  const [selectedIndustry, setSelectedIndustry] = useState<string>("");
+  const [selectedIndustry, setSelectedIndustry] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
