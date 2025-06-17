@@ -13,10 +13,12 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [showResults, setShowResults] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
 
-  const handleIndustrySelected = (industry: string, customer: string) => {
+  const handleIndustrySelected = (industry: string, customer: string, recommendations: any[] = []) => {
     setSelectedIndustry(industry);
     setCustomerName(customer);
+    setAiRecommendations(recommendations);
     setShowResults(true);
   };
 
@@ -25,6 +27,7 @@ const Index = () => {
     setCustomerName("");
     setSearchTerm("");
     setSelectedCategory("all");
+    setAiRecommendations([]);
     setShowResults(false);
   };
 
@@ -120,6 +123,11 @@ const Index = () => {
                         {selectedIndustry.charAt(0).toUpperCase() + selectedIndustry.slice(1)}
                       </span>{" "}
                       industry
+                      {aiRecommendations.length > 0 && (
+                        <span className="ml-2 text-purple-600">
+                          • {aiRecommendations.length} AI-powered recommendations
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="bg-purple-100 p-3 rounded-full">
@@ -147,6 +155,7 @@ const Index = () => {
               selectedIndustry={selectedIndustry}
               searchTerm={searchTerm}
               selectedCategory={selectedCategory}
+              aiRecommendations={aiRecommendations}
             />
           </>
         )}

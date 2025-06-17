@@ -4,19 +4,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCaseData } from "@/data/useCaseData";
-import { BadgeDollarSign, Briefcase } from "lucide-react";
+import { BadgeDollarSign, Briefcase, Sparkles } from "lucide-react";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
   searchTerm: string;
   selectedCategory: string;
+  aiRecommendations?: any[];
 }
 
-export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: UseCaseGridProps) => {
+export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, aiRecommendations = [] }: UseCaseGridProps) => {
   const [selectedUseCase, setSelectedUseCase] = useState<any>(null);
 
-  const filteredUseCases = useCaseData.filter(useCase => {
-    // If an industry is selected, show use cases that include this industry
+  // Convert AI recommendations to the format expected by the grid
+  const aiUseCases = aiRecommendations.map((useCase, index) => ({
+    id: `ai-${index}`,
+    title: useCase.title,
+    description: useCase.description,
+    category: useCase.category,
+    roi: useCase.roi.replace('%', ''), // Remove % sign if present
+    implementation: useCase.implementation,
+    timeline: useCase.timeline,
+    industries: [selectedIndustry],
+    costSavings: "TBD", // AI recommendations don't include cost savings
+    isAiRecommended: true
+  }));
+
+  // Filter regular use cases
+  const filteredRegularUseCases = useCaseData.filter(useCase => {
     const matchesIndustry = !selectedIndustry || selectedIndustry === "all" || useCase.industries.includes(selectedIndustry);
     const matchesSearch = !searchTerm || 
       useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -25,6 +40,18 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: 
     
     return matchesIndustry && matchesSearch && matchesCategory;
   });
+
+  // Combine AI recommendations (prioritized) with filtered regular use cases
+  const allUseCases = [
+    ...aiUseCases,
+    ...filteredRegularUseCases.filter(regularUseCase => 
+      // Avoid duplicates by checking if AI recommendation has similar title
+      !aiUseCases.some(aiUseCase => 
+        aiUseCase.title.toLowerCase().includes(regularUseCase.title.toLowerCase().split(' ')[0]) ||
+        regularUseCase.title.toLowerCase().includes(aiUseCase.title.toLowerCase().split(' ')[0])
+      )
+    )
+  ];
 
   const getRoiColor = (roi: string) => {
     const roiValue = parseInt(roi);
@@ -46,7 +73,12 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: 
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
-          {filteredUseCases.length} Recommended AI Solution{filteredUseCases.length !== 1 ? 's' : ''}
+          {allUseCases.length} Recommended AI Solution{allUseCases.length !== 1 ? 's' : ''}
+          {aiRecommendations.length > 0 && (
+            <span className="ml-2 text-sm text-purple-600 font-normal">
+              ({aiRecommendations.length} AI-tailored)
+            </span>
+          )}
         </h2>
         <div className="text-sm text-gray-600">
           Ranked by relevance and ROI potential
@@ -54,18 +86,30 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredUseCases.map((useCase) => (
-          <Card key={useCase.id} className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4 border-l-blue-500">
+        {allUseCases.map((useCase) => (
+          <Card key={useCase.id} className={`hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4 ${
+            useCase.isAiRecommended ? 'border-l-purple-500 bg-gradient-to-br from-purple-50 to-white' : 'border-l-blue-500'
+          }`}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <CardTitle className="text-lg text-gray-900 mb-2">{useCase.title}</CardTitle>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CardTitle className="text-lg text-gray-900">{useCase.title}</CardTitle>
+                    {useCase.isAiRecommended && (
+                      <Sparkles className="h-4 w-4 text-purple-600" />
+                    )}
+                  </div>
                   <CardDescription className="text-gray-600 text-sm leading-relaxed">
                     {useCase.description}
                   </CardDescription>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
+                {useCase.isAiRecommended && (
+                  <Badge className="text-xs bg-purple-100 text-purple-800">
+                    AI Recommended
+                  </Badge>
+                )}
                 <Badge variant="secondary" className="text-xs">
                   {useCase.category.replace('-', ' ')}
                 </Badge>
@@ -94,7 +138,7 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: 
                     <div className="flex items-center space-x-1">
                       <BadgeDollarSign className="h-4 w-4 text-green-600" />
                       <span className="text-sm font-medium text-green-600">
-                        ${useCase.costSavings}
+                        {useCase.costSavings || "TBD"}
                       </span>
                     </div>
                     <Button size="sm" variant="outline" className="text-xs">
@@ -113,7 +157,7 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: 
         ))}
       </div>
 
-      {filteredUseCases.length === 0 && (
+      {allUseCases.length === 0 && (
         <div className="text-center py-12">
           <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No matching solutions found</h3>

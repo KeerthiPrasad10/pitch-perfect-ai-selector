@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Search, Building2, Check, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CustomerInputProps {
-  onIndustrySelected: (industry: string, customerName: string) => void;
+  onIndustrySelected: (industry: string, customerName: string, aiRecommendations?: any[]) => void;
 }
 
 export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
@@ -48,7 +47,8 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
         industry: "technology",
         confidence: "low",
         reasoning: "AI analysis unavailable, showing common options",
-        suggestedCategories: fallbackIndustries
+        suggestedCategories: fallbackIndustries,
+        relevantUseCases: []
       });
       setShowIndustrySelection(true);
     } finally {
@@ -63,7 +63,8 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
   };
 
   const handleIndustrySelect = (industry: string) => {
-    onIndustrySelected(industry, customerName);
+    // Pass the AI recommendations along with the industry selection
+    onIndustrySelected(industry, customerName, analysisResult?.relevantUseCases || []);
     setShowIndustrySelection(false);
     setAnalysisResult(null);
   };
@@ -195,6 +196,12 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
               {analysisResult.reasoning && (
                 <div className="text-xs text-purple-600 bg-white p-2 rounded border">
                   <strong>AI Reasoning:</strong> {analysisResult.reasoning}
+                </div>
+              )}
+
+              {analysisResult.relevantUseCases && analysisResult.relevantUseCases.length > 0 && (
+                <div className="text-xs text-purple-600 bg-white p-2 rounded border">
+                  <strong>AI Found:</strong> {analysisResult.relevantUseCases.length} tailored use case{analysisResult.relevantUseCases.length !== 1 ? 's' : ''} for this industry
                 </div>
               )}
             </div>
