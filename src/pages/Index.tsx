@@ -67,7 +67,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between h-auto sm:h-16 py-4 sm:py-0 gap-4 sm:gap-0">
             <div className="flex items-center space-x-4">
               <img 
-                src="/lovable-uploads/ifs-logo.png" 
+                src="/public/lovable-uploads/276c78fd-f333-4917-8105-2e8759fbf881.png" 
                 alt="IFS Logo" 
                 className="h-8 sm:h-10 w-auto"
               />
@@ -131,38 +131,6 @@ const Index = () => {
                     Targeted Solutions
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Feature Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              <div className="text-center group cursor-pointer">
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
-                  <Target className="h-8 w-8 text-white" />
-                </div>
-                <h4 className="font-semibold text-slate-800 text-sm sm:text-base mb-1">Smart Targeting</h4>
-                <p className="text-xs text-slate-600">Identify prospects automatically</p>
-              </div>
-              <div className="text-center group cursor-pointer">
-                <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
-                  <TrendingUp className="h-8 w-8 text-white" />
-                </div>
-                <h4 className="font-semibold text-slate-800 text-sm sm:text-base mb-1">Industry Analytics</h4>
-                <p className="text-xs text-slate-600">Deep market insights</p>
-              </div>
-              <div className="text-center group cursor-pointer">
-                <div className="bg-gradient-to-br from-violet-500 to-violet-600 p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
-                  <Users className="h-8 w-8 text-white" />
-                </div>
-                <h4 className="font-semibold text-slate-800 text-sm sm:text-base mb-1">Customer Matching</h4>
-                <p className="text-xs text-slate-600">Find similar IFS customers</p>
-              </div>
-              <div className="text-center group cursor-pointer">
-                <div className="bg-gradient-to-br from-purple-600 to-purple-700 p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
-                  <Briefcase className="h-8 w-8 text-white" />
-                </div>
-                <h4 className="font-semibold text-slate-800 text-sm sm:text-base mb-1">Solution Strategy</h4>
-                <p className="text-xs text-slate-600">Tailored AI recommendations</p>
               </div>
             </div>
           </div>
