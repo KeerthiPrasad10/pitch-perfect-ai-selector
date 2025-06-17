@@ -97,6 +97,38 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Message when no results */}
+        {!showResults && (
+          <div className="text-center py-16 mb-8">
+            <div className="bg-white rounded-lg shadow-sm p-12 border border-purple-100 max-w-2xl mx-auto">
+              <div className="bg-purple-100 p-4 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                <Target className="h-10 w-10 text-purple-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Welcome to IFS AI Use Case Identifier
+              </h2>
+              <p className="text-gray-600 text-lg mb-6">
+                Enter your customer's name above and let our AI identify the perfect industry match. 
+                We'll then show you the most relevant AI use cases to help close your next deal.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h4 className="font-semibold text-purple-900 mb-2">1. Enter Customer</h4>
+                  <p className="text-purple-700">Type in your prospect's company name</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h4 className="font-semibold text-purple-900 mb-2">2. AI Analysis</h4>
+                  <p className="text-purple-700">Our AI identifies their industry</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h4 className="font-semibold text-purple-900 mb-2">3. Get Solutions</h4>
+                  <p className="text-purple-700">View tailored AI use cases</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm p-6 border border-purple-100">
@@ -189,38 +221,6 @@ const Index = () => {
               aiRecommendations={aiRecommendations}
             />
           </>
-        )}
-
-        {/* Welcome Message when no results */}
-        {!showResults && (
-          <div className="text-center py-16">
-            <div className="bg-white rounded-lg shadow-sm p-12 border border-purple-100 max-w-2xl mx-auto">
-              <div className="bg-purple-100 p-4 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                <Target className="h-10 w-10 text-purple-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Welcome to IFS AI Use Case Identifier
-              </h2>
-              <p className="text-gray-600 text-lg mb-6">
-                Enter your customer's name above and let our AI identify the perfect industry match. 
-                We'll then show you the most relevant AI use cases to help close your next deal.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                  <h4 className="font-semibold text-purple-900 mb-2">1. Enter Customer</h4>
-                  <p className="text-purple-700">Type in your prospect's company name</p>
-                </div>
-                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                  <h4 className="font-semibold text-purple-900 mb-2">2. AI Analysis</h4>
-                  <p className="text-purple-700">Our AI identifies their industry</p>
-                </div>
-                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                  <h4 className="font-semibold text-purple-900 mb-2">3. Get Solutions</h4>
-                  <p className="text-purple-700">View tailored AI use cases</p>
-                </div>
-              </div>
-            </div>
-          </div>
         )}
       </main>
     </div>
