@@ -37,73 +37,102 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Try to read the uploaded table from storage
-    let industryData = '';
+    // Try to read the uploaded CSV/table from storage
     let useCaseData = '';
+    let csvContent = '';
     
     try {
-      console.log('Attempting to read industry data from storage...');
+      console.log('Attempting to read use case data from storage...');
       
-      // List files in the default bucket to find the uploaded table
-      const { data: files, error: listError } = await supabase.storage
-        .from('files')
-        .list('', { limit: 100 });
+      // Try different bucket names that might contain the file
+      const bucketNames = ['files', 'uploads', 'documents', 'data'];
+      let fileFound = false;
+      
+      for (const bucketName of bucketNames) {
+        try {
+          const { data: files, error: listError } = await supabase.storage
+            .from(bucketName)
+            .list('', { limit: 100 });
 
-      if (listError) {
-        console.log('Error listing files:', listError);
-      } else {
-        console.log('Found files:', files?.map(f => f.name));
-        
-        // Look for common table file extensions
-        const tableFile = files?.find(file => 
-          file.name.toLowerCase().includes('industry') || 
-          file.name.toLowerCase().includes('usecase') ||
-          file.name.toLowerCase().endsWith('.csv') ||
-          file.name.toLowerCase().endsWith('.json')
-        );
-
-        if (tableFile) {
-          console.log('Found table file:', tableFile.name);
-          
-          const { data: fileData, error: downloadError } = await supabase.storage
-            .from('files')
-            .download(tableFile.name);
-
-          if (!downloadError && fileData) {
-            const fileContent = await fileData.text();
-            console.log('Successfully read file content, length:', fileContent.length);
+          if (!listError && files && files.length > 0) {
+            console.log(`Found files in ${bucketName}:`, files.map(f => f.name));
             
-            if (tableFile.name.toLowerCase().endsWith('.json')) {
-              try {
-                const jsonData = JSON.parse(fileContent);
-                industryData = JSON.stringify(jsonData, null, 2);
-              } catch (parseError) {
-                console.log('JSON parse error:', parseError);
-                industryData = fileContent;
+            // Look for CSV files or files with relevant names
+            const relevantFile = files.find(file => 
+              file.name.toLowerCase().endsWith('.csv') ||
+              file.name.toLowerCase().includes('usecase') ||
+              file.name.toLowerCase().includes('industry') ||
+              file.name.toLowerCase().includes('customer') ||
+              file.name.toLowerCase().includes('data')
+            );
+
+            if (relevantFile) {
+              console.log(`Found relevant file: ${relevantFile.name} in bucket: ${bucketName}`);
+              
+              const { data: fileData, error: downloadError } = await supabase.storage
+                .from(bucketName)
+                .download(relevantFile.name);
+
+              if (!downloadError && fileData) {
+                csvContent = await fileData.text();
+                console.log('Successfully read CSV content, length:', csvContent.length);
+                console.log('First 200 characters:', csvContent.substring(0, 200));
+                fileFound = true;
+                break;
+              } else {
+                console.log('Error downloading file:', downloadError);
               }
-            } else {
-              industryData = fileContent;
             }
-            
-            useCaseData = `
-Based on the uploaded industry data, here are the enhanced industry classifications and use cases:
-
-${industryData}
-
-Use this data to provide more accurate industry classification and relevant use cases for the customer.
-            `;
-          } else {
-            console.log('Error downloading file:', downloadError);
           }
-        } else {
-          console.log('No suitable table file found in storage');
+        } catch (bucketError) {
+          console.log(`Error accessing bucket ${bucketName}:`, bucketError.message);
         }
+      }
+      
+      if (!fileFound) {
+        console.log('No relevant CSV file found in any storage bucket');
       }
     } catch (storageError) {
       console.log('Storage access error:', storageError);
     }
 
-    // Fallback to existing customer data if no file found
+    // Parse CSV content if found
+    let parsedUseCases = [];
+    if (csvContent) {
+      try {
+        // Simple CSV parsing - split by lines and then by commas
+        const lines = csvContent.split('\n').filter(line => line.trim());
+        const headers = lines[0] ? lines[0].split(',').map(h => h.trim().replace(/"/g, '')) : [];
+        console.log('CSV headers:', headers);
+        
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+          if (values.length >= headers.length) {
+            const row = {};
+            headers.forEach((header, index) => {
+              row[header] = values[index] || '';
+            });
+            parsedUseCases.push(row);
+          }
+        }
+        
+        console.log(`Parsed ${parsedUseCases.length} use cases from CSV`);
+        console.log('Sample use case:', parsedUseCases[0]);
+        
+        useCaseData = `
+Based on the uploaded use case data, here are the available AI use cases and their descriptions:
+
+${JSON.stringify(parsedUseCases, null, 2)}
+
+Use this data to provide accurate industry classification and recommend the most relevant use cases with their detailed descriptions for the customer's industry.
+        `;
+      } catch (parseError) {
+        console.log('Error parsing CSV:', parseError);
+        csvContent = ''; // Reset if parsing fails
+      }
+    }
+
+    // Fallback to existing customer data if no CSV found
     const fallbackCustomerData = `
     AE Rodda & Son - Manufacturing
     EUROFEU - Manufacturing
@@ -259,8 +288,12 @@ Based on the company name provided, classify it into one of these industry categ
 - Telco
 - Other
 
-Here is the industry data and use case information to reference:
+Here is the industry and use case data to reference:
 ${finalIndustryData}
+
+${parsedUseCases.length > 0 ? `
+IMPORTANT: When selecting relevant use cases, choose from the uploaded CSV data and include their detailed descriptions. Focus on use cases that are most applicable to the identified industry. The CSV contains specific use case titles, descriptions, industries they apply to, ROI information, and implementation details.
+` : ''}
 
 Analyze the company name, consider the business context, and respond with a JSON object containing:
 {
@@ -268,10 +301,18 @@ Analyze the company name, consider the business context, and respond with a JSON
   "confidence": "high|medium|low", 
   "reasoning": "brief explanation of why this industry was selected",
   "suggestedCategories": ["array", "of", "possible", "industries"],
-  "relevantUseCases": ["array", "of", "relevant", "use", "cases", "from", "the", "data"]
+  "relevantUseCases": [
+    {
+      "title": "Use Case Title",
+      "description": "Detailed description from CSV",
+      "category": "Use case category",
+      "roi": "ROI percentage if available",
+      "implementation": "Implementation complexity if available"
+    }
+  ]
 }
 
-Be specific and accurate. If unsure, mark confidence as "low" and provide multiple suggested categories. Include relevant use cases from the uploaded data if available. IMPORTANT: Return ONLY the JSON object without any markdown formatting or code blocks.`
+Be specific and accurate. If unsure, mark confidence as "low" and provide multiple suggested categories. ${parsedUseCases.length > 0 ? 'Select the most relevant use cases from the uploaded data with their complete descriptions.' : 'Include relevant use cases from the available data.'} IMPORTANT: Return ONLY the JSON object without any markdown formatting or code blocks.`
           },
           {
             role: 'user',
@@ -279,7 +320,7 @@ Be specific and accurate. If unsure, mark confidence as "low" and provide multip
           }
         ],
         temperature: 0.3,
-        max_tokens: 800
+        max_tokens: 1000
       }),
     });
 
@@ -322,7 +363,8 @@ Be specific and accurate. If unsure, mark confidence as "low" and provide multip
       success: true,
       customerName,
       analysis: analysisResult,
-      dataSource: useCaseData ? 'uploaded_table' : 'fallback_data'
+      dataSource: csvContent ? 'csv_file' : 'fallback_data',
+      useCasesFound: parsedUseCases.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
