@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -190,7 +189,7 @@ serve(async (req) => {
         analysis: {
           industry: "unknown",
           confidence: "low",
-          reasoning: "Unable to identify company - AI analysis unavailable. Please select the most appropriate industry from the options provided.",
+          reasoning: `Unable to identify "${customerName}" in IFS customer list - Please select the industry.`,
           suggestedCategories: allIndustries,
           relevantUseCases: [],
           requiresManualSelection: true,
@@ -294,6 +293,11 @@ IMPORTANT:
       analysisResult.suggestedCompanies = suggestedCompanies;
       analysisResult.suggestedCategories = allIndustries;
       analysisResult.requiresManualSelection = true;
+      
+      // Update reasoning to be more specific about IFS customer list
+      if (analysisResult.reasoning && !analysisResult.reasoning.includes('IFS customer list')) {
+        analysisResult.reasoning = `Unable to identify "${customerName}" in IFS customer list - Please select the industry.`;
+      }
     }
 
     console.log('Final analysis result:', analysisResult);
@@ -309,12 +313,13 @@ IMPORTANT:
     console.error('Error in analyze-industry function:', error);
     
     // Return fallback with all industries on any error
+    const { customerName } = await req.json().catch(() => ({ customerName: 'Unknown' }));
     return new Response(JSON.stringify({
       success: true,
       analysis: {
         industry: "unknown",
         confidence: "unknown",
-        reasoning: "Analysis failed - please select the appropriate industry manually",
+        reasoning: `Unable to identify "${customerName}" in IFS customer list - Please select the industry.`,
         suggestedCategories: allIndustries,
         relevantUseCases: [],
         requiresManualSelection: true,

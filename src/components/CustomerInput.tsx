@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -55,7 +54,7 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
       setAnalysisResult({
         industry: "unknown",
         confidence: "unknown",
-        reasoning: "Unable to analyze company - please select the appropriate industry",
+        reasoning: `Unable to identify "${companyName}" in IFS customer list - Please select the industry.`,
         suggestedCategories: allIndustries,
         relevantUseCases: [],
         requiresManualSelection: true,
@@ -189,7 +188,7 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
                 )}
                 <span>
                   {analysisResult.industry === 'unknown' || analysisResult.requiresManualSelection 
-                    ? `Unable to identify "${customerName}" - Please select industry`
+                    ? analysisResult.reasoning
                     : `AI Analysis for "${selectedCompany || customerName}"`
                   }
                 </span>
@@ -248,12 +247,6 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
               
               {analysisResult.suggestedCategories && analysisResult.suggestedCategories.length > 0 && (
                 <>
-                  <div className="text-xs text-purple-600 font-medium">
-                    {analysisResult.requiresManualSelection || analysisResult.industry === 'unknown' 
-                      ? 'Or select the appropriate industry:' 
-                      : 'Alternative Options:'
-                    }
-                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                     {analysisResult.suggestedCategories
                       .filter((cat: string) => cat !== analysisResult.industry || analysisResult.industry === 'unknown')
@@ -273,17 +266,6 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
                     ))}
                   </div>
                 </>
-              )}
-              
-              {analysisResult.reasoning && (
-                <div className="text-xs text-purple-600 bg-white p-2 rounded border">
-                  <strong>
-                    {analysisResult.industry === 'unknown' || analysisResult.requiresManualSelection 
-                      ? 'Note:' 
-                      : 'AI Reasoning:'
-                    }
-                  </strong> {analysisResult.reasoning}
-                </div>
               )}
 
               {analysisResult.relevantUseCases && analysisResult.relevantUseCases.length > 0 && (
