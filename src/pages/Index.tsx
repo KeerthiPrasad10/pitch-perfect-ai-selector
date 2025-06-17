@@ -75,7 +75,7 @@ const Index = () => {
                 <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-800 to-purple-600 bg-clip-text text-transparent">
                   AI Use Case Identifier
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-600 hidden sm:block">Identify AI solutions for IFS prospects</p>
+                <p className="text-xs sm:text-sm text-slate-600 hidden sm:block">We are identifying AI solutions for IFS customers and prospects</p>
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto">
@@ -115,7 +115,7 @@ const Index = () => {
                   IFS AI Use Case Identifier
                 </h2>
                 <p className="text-lg sm:text-xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
-                  Enter a prospect's company name to automatically identify their industry and discover relevant AI use cases for IFS solutions.
+                  Enter a prospect or current IFS customer name to automatically identify their industry and discover relevant AI use cases within IFS solutions.
                 </p>
                 <div className="flex flex-wrap justify-center gap-6 text-white/80 text-sm">
                   <div className="flex items-center">
