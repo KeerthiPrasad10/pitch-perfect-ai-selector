@@ -30,7 +30,7 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     isAiRecommended: true
   }));
 
-  // Filter regular use cases
+  // Filter regular use cases and add isAiRecommended property
   const filteredRegularUseCases = useCaseData.filter(useCase => {
     const matchesIndustry = !selectedIndustry || selectedIndustry === "all" || useCase.industries.includes(selectedIndustry);
     const matchesSearch = !searchTerm || 
@@ -39,7 +39,10 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     const matchesCategory = !selectedCategory || selectedCategory === "all" || useCase.category === selectedCategory;
     
     return matchesIndustry && matchesSearch && matchesCategory;
-  });
+  }).map(useCase => ({
+    ...useCase,
+    isAiRecommended: false
+  }));
 
   // Combine AI recommendations (prioritized) with filtered regular use cases
   const allUseCases = [
