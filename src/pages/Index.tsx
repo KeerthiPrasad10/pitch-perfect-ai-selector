@@ -39,7 +39,7 @@ const Index = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <img 
-                src="/lovable-uploads/7cee9e86-fe76-4b83-b88e-56e0aef1eea2.png" 
+                src="/lovable-uploads/276c78fd-f333-4917-8105-2e8759fbf881.png" 
                 alt="IFS Logo" 
                 className="h-10 w-auto"
               />
