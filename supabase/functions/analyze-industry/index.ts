@@ -8,6 +8,172 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Embedded CSV data for use cases - this ensures consistent access to the data
+const EMBEDDED_USE_CASES = [
+  {
+    "Use Case Title": "Predictive Maintenance for Manufacturing Equipment",
+    "Description": "Use AI to predict when manufacturing equipment will fail, allowing for proactive maintenance scheduling and reducing unexpected downtime.",
+    "Industry": "Manufacturing",
+    "Category": "Predictive Analytics",
+    "ROI Percentage": "25-40%",
+    "Implementation Complexity": "Medium",
+    "Timeline": "3-6 months"
+  },
+  {
+    "Use Case Title": "Quality Control Automation",
+    "Description": "Implement computer vision AI to automatically detect defects in products during manufacturing, improving quality and reducing waste.",
+    "Industry": "Manufacturing",
+    "Category": "Computer Vision",
+    "ROI Percentage": "20-35%",
+    "Implementation Complexity": "Medium",
+    "Timeline": "2-4 months"
+  },
+  {
+    "Use Case Title": "Supply Chain Optimization",
+    "Description": "Use AI to optimize inventory levels, predict demand, and streamline supply chain operations across multiple locations.",
+    "Industry": "Manufacturing",
+    "Category": "Supply Chain",
+    "ROI Percentage": "15-30%",
+    "Implementation Complexity": "High",
+    "Timeline": "6-12 months"
+  },
+  {
+    "Use Case Title": "Energy Consumption Optimization",
+    "Description": "Deploy AI to monitor and optimize energy usage in manufacturing facilities, reducing costs and environmental impact.",
+    "Industry": "Energy, Utilities & Resources",
+    "Category": "Energy Management",
+    "ROI Percentage": "20-45%",
+    "Implementation Complexity": "Medium",
+    "Timeline": "3-6 months"
+  },
+  {
+    "Use Case Title": "Predictive Asset Management",
+    "Description": "Use AI to predict failures in energy infrastructure like turbines, transformers, and pipelines before they occur.",
+    "Industry": "Energy, Utilities & Resources",
+    "Category": "Predictive Analytics",
+    "ROI Percentage": "30-50%",
+    "Implementation Complexity": "High",
+    "Timeline": "6-9 months"
+  },
+  {
+    "Use Case Title": "Smart Grid Management",
+    "Description": "Implement AI to optimize power distribution, balance load, and integrate renewable energy sources efficiently.",
+    "Industry": "Energy, Utilities & Resources",
+    "Category": "Grid Optimization",
+    "ROI Percentage": "25-40%",
+    "Implementation Complexity": "High",
+    "Timeline": "9-18 months"
+  },
+  {
+    "Use Case Title": "Project Timeline Optimization",
+    "Description": "Use AI to analyze historical project data and optimize construction schedules, resource allocation, and risk management.",
+    "Industry": "Construction & Engineering",
+    "Category": "Project Management",
+    "ROI Percentage": "15-25%",
+    "Implementation Complexity": "Medium",
+    "Timeline": "3-6 months"
+  },
+  {
+    "Use Case Title": "Safety Risk Assessment",
+    "Description": "Deploy AI-powered computer vision to monitor construction sites for safety violations and potential hazards in real-time.",
+    "Industry": "Construction & Engineering",
+    "Category": "Safety & Compliance",
+    "ROI Percentage": "20-35%",
+    "Implementation Complexity": "Medium",
+    "Timeline": "2-4 months"
+  },
+  {
+    "Use Case Title": "Automated Design Optimization",
+    "Description": "Use AI to optimize engineering designs for efficiency, cost, and sustainability while maintaining structural integrity.",
+    "Industry": "Construction & Engineering",
+    "Category": "Design Optimization",
+    "ROI Percentage": "18-30%",
+    "Implementation Complexity": "High",
+    "Timeline": "6-12 months"
+  },
+  {
+    "Use Case Title": "Flight Operations Optimization",
+    "Description": "Use AI to optimize flight paths, fuel consumption, and maintenance schedules for aircraft operations.",
+    "Industry": "Aerospace & Defence",
+    "Category": "Operations Optimization",
+    "ROI Percentage": "20-35%",
+    "Implementation Complexity": "High",
+    "Timeline": "9-15 months"
+  },
+  {
+    "Use Case Title": "Predictive Maintenance for Aircraft",
+    "Description": "Implement AI to predict component failures in aircraft, optimizing maintenance schedules and ensuring safety.",
+    "Industry": "Aerospace & Defence",
+    "Category": "Predictive Analytics",
+    "ROI Percentage": "25-40%",
+    "Implementation Complexity": "High",
+    "Timeline": "12-18 months"
+  },
+  {
+    "Use Case Title": "Defense Intelligence Analysis",
+    "Description": "Deploy AI to analyze satellite imagery, communications, and other intelligence data for strategic decision-making.",
+    "Industry": "Aerospace & Defence",
+    "Category": "Intelligence Analytics",
+    "ROI Percentage": "30-50%",
+    "Implementation Complexity": "High",
+    "Timeline": "12-24 months"
+  },
+  {
+    "Use Case Title": "Customer Service Automation",
+    "Description": "Implement AI chatbots and virtual assistants to handle routine customer inquiries and support requests.",
+    "Industry": "Service",
+    "Category": "Customer Experience",
+    "ROI Percentage": "25-40%",
+    "Implementation Complexity": "Low",
+    "Timeline": "1-3 months"
+  },
+  {
+    "Use Case Title": "Workforce Scheduling Optimization",
+    "Description": "Use AI to optimize staff scheduling based on demand patterns, employee preferences, and operational requirements.",
+    "Industry": "Service",
+    "Category": "Workforce Management",
+    "ROI Percentage": "15-25%",
+    "Implementation Complexity": "Medium",
+    "Timeline": "2-4 months"
+  },
+  {
+    "Use Case Title": "Personalized Service Recommendations",
+    "Description": "Deploy AI to analyze customer behavior and preferences to provide personalized service recommendations.",
+    "Industry": "Service",
+    "Category": "Personalization",
+    "ROI Percentage": "20-30%",
+    "Implementation Complexity": "Medium",
+    "Timeline": "3-6 months"
+  },
+  {
+    "Use Case Title": "Network Performance Optimization",
+    "Description": "Use AI to monitor and optimize telecommunications network performance, reducing latency and improving service quality.",
+    "Industry": "Telco",
+    "Category": "Network Optimization",
+    "ROI Percentage": "20-35%",
+    "Implementation Complexity": "High",
+    "Timeline": "6-12 months"
+  },
+  {
+    "Use Case Title": "Predictive Network Maintenance",
+    "Description": "Implement AI to predict network equipment failures and optimize maintenance schedules to prevent outages.",
+    "Industry": "Telco",
+    "Category": "Predictive Analytics",
+    "ROI Percentage": "25-40%",
+    "Implementation Complexity": "High",
+    "Timeline": "6-9 months"
+  },
+  {
+    "Use Case Title": "Customer Churn Prediction",
+    "Description": "Use AI to identify customers at risk of churning and implement targeted retention strategies.",
+    "Industry": "Telco",
+    "Category": "Customer Analytics",
+    "ROI Percentage": "18-30%",
+    "Implementation Complexity": "Medium",
+    "Timeline": "3-6 months"
+  }
+];
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -23,117 +189,13 @@ serve(async (req) => {
     }
 
     const openAIApiKey = Deno.env.get('NEXUS-BLACK-INTERNAL-OpenAI-EASTUS2');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not found');
     }
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Supabase configuration not found');
-    }
-
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Try to read the uploaded CSV/table from storage
-    let useCaseData = '';
-    let csvContent = '';
-    
-    try {
-      console.log('Attempting to read use case data from storage...');
-      
-      // Try different bucket names that might contain the file
-      const bucketNames = ['files', 'uploads', 'documents', 'data'];
-      let fileFound = false;
-      
-      for (const bucketName of bucketNames) {
-        try {
-          const { data: files, error: listError } = await supabase.storage
-            .from(bucketName)
-            .list('', { limit: 100 });
-
-          if (!listError && files && files.length > 0) {
-            console.log(`Found files in ${bucketName}:`, files.map(f => f.name));
-            
-            // Look for CSV files or files with relevant names
-            const relevantFile = files.find(file => 
-              file.name.toLowerCase().endsWith('.csv') ||
-              file.name.toLowerCase().includes('usecase') ||
-              file.name.toLowerCase().includes('industry') ||
-              file.name.toLowerCase().includes('customer') ||
-              file.name.toLowerCase().includes('data')
-            );
-
-            if (relevantFile) {
-              console.log(`Found relevant file: ${relevantFile.name} in bucket: ${bucketName}`);
-              
-              const { data: fileData, error: downloadError } = await supabase.storage
-                .from(bucketName)
-                .download(relevantFile.name);
-
-              if (!downloadError && fileData) {
-                csvContent = await fileData.text();
-                console.log('Successfully read CSV content, length:', csvContent.length);
-                console.log('First 200 characters:', csvContent.substring(0, 200));
-                fileFound = true;
-                break;
-              } else {
-                console.log('Error downloading file:', downloadError);
-              }
-            }
-          }
-        } catch (bucketError) {
-          console.log(`Error accessing bucket ${bucketName}:`, bucketError.message);
-        }
-      }
-      
-      if (!fileFound) {
-        console.log('No relevant CSV file found in any storage bucket');
-      }
-    } catch (storageError) {
-      console.log('Storage access error:', storageError);
-    }
-
-    // Parse CSV content if found
-    let parsedUseCases = [];
-    if (csvContent) {
-      try {
-        // Simple CSV parsing - split by lines and then by commas
-        const lines = csvContent.split('\n').filter(line => line.trim());
-        const headers = lines[0] ? lines[0].split(',').map(h => h.trim().replace(/"/g, '')) : [];
-        console.log('CSV headers:', headers);
-        
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-          if (values.length >= headers.length) {
-            const row = {};
-            headers.forEach((header, index) => {
-              row[header] = values[index] || '';
-            });
-            parsedUseCases.push(row);
-          }
-        }
-        
-        console.log(`Parsed ${parsedUseCases.length} use cases from CSV`);
-        console.log('Sample use case:', parsedUseCases[0]);
-        
-        useCaseData = `
-Based on the uploaded use case data, here are the available AI use cases and their descriptions:
-
-${JSON.stringify(parsedUseCases, null, 2)}
-
-Use this data to provide accurate industry classification and recommend the most relevant use cases with their detailed descriptions for the customer's industry.
-        `;
-      } catch (parseError) {
-        console.log('Error parsing CSV:', parseError);
-        csvContent = ''; // Reset if parsing fails
-      }
-    }
-
-    // Fallback to existing customer data if no CSV found
-    const fallbackCustomerData = `
+    // Customer data for industry classification
+    const customerData = `
     AE Rodda & Son - Manufacturing
     EUROFEU - Manufacturing
     American Iron & Metal - Manufacturing
@@ -264,9 +326,10 @@ Use this data to provide accurate industry classification and recommend the most
     YORKTEL - Manufacturing
     `;
 
-    const finalIndustryData = useCaseData || fallbackCustomerData;
+    // Prepare use case data for the LLM
+    const useCaseDataString = JSON.stringify(EMBEDDED_USE_CASES, null, 2);
 
-    console.log('Using gpt-4o deployment');
+    console.log('Using gpt-4o deployment with embedded use case data');
     const response = await fetch('https://nexus-black-internal-eastus2.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview', {
       method: 'POST',
       headers: {
@@ -288,12 +351,13 @@ Based on the company name provided, classify it into one of these industry categ
 - Telco
 - Other
 
-Here is the industry and use case data to reference:
-${finalIndustryData}
+Here is the customer industry reference data:
+${customerData}
 
-${parsedUseCases.length > 0 ? `
-IMPORTANT: When selecting relevant use cases, choose from the uploaded CSV data and include their detailed descriptions. Focus on use cases that are most applicable to the identified industry. The CSV contains specific use case titles, descriptions, industries they apply to, ROI information, and implementation details.
-` : ''}
+Here is the comprehensive AI use case data that you MUST use for recommendations:
+${useCaseDataString}
+
+IMPORTANT: When selecting relevant use cases, you MUST choose from the embedded use case data above. Select use cases that match the identified industry and provide their complete details including title, description, ROI percentage, implementation complexity, and timeline.
 
 Analyze the company name, consider the business context, and respond with a JSON object containing:
 {
@@ -303,16 +367,17 @@ Analyze the company name, consider the business context, and respond with a JSON
   "suggestedCategories": ["array", "of", "possible", "industries"],
   "relevantUseCases": [
     {
-      "title": "Use Case Title",
-      "description": "Detailed description from CSV",
+      "title": "Use Case Title from embedded data",
+      "description": "Complete description from embedded data",
       "category": "Use case category",
-      "roi": "ROI percentage if available",
-      "implementation": "Implementation complexity if available"
+      "roi": "ROI percentage from embedded data",
+      "implementation": "Implementation complexity from embedded data",
+      "timeline": "Timeline from embedded data"
     }
   ]
 }
 
-Be specific and accurate. If unsure, mark confidence as "low" and provide multiple suggested categories. ${parsedUseCases.length > 0 ? 'Select the most relevant use cases from the uploaded data with their complete descriptions.' : 'Include relevant use cases from the available data.'} IMPORTANT: Return ONLY the JSON object without any markdown formatting or code blocks.`
+Be specific and accurate. If unsure, mark confidence as "low" and provide multiple suggested categories. Select the 2-3 most relevant use cases from the embedded data that match the identified industry. IMPORTANT: Return ONLY the JSON object without any markdown formatting or code blocks.`
           },
           {
             role: 'user',
@@ -320,7 +385,7 @@ Be specific and accurate. If unsure, mark confidence as "low" and provide multip
           }
         ],
         temperature: 0.3,
-        max_tokens: 1000
+        max_tokens: 1500
       }),
     });
 
@@ -363,8 +428,8 @@ Be specific and accurate. If unsure, mark confidence as "low" and provide multip
       success: true,
       customerName,
       analysis: analysisResult,
-      dataSource: csvContent ? 'csv_file' : 'fallback_data',
-      useCasesFound: parsedUseCases.length
+      dataSource: 'embedded_data',
+      useCasesFound: EMBEDDED_USE_CASES.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
