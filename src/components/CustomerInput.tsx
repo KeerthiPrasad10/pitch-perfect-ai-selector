@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Building2, Check, Sparkles } from "lucide-react";
+import { Search, Building2, Check, Sparkles, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CustomerInputProps {
@@ -41,14 +42,21 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
       }
     } catch (error) {
       console.error('Error analyzing industry:', error);
-      // Fallback to mock data if AI fails
-      const fallbackIndustries = ["technology", "manufacturing", "finance"];
+      // Fallback to unknown with all industries
+      const allIndustries = [
+        "manufacturing", "healthcare", "finance", "retail", "technology", 
+        "automotive", "energy", "utilities", "education", "government", 
+        "logistics", "media", "insurance", "real-estate", "agriculture", 
+        "hospitality", "construction", "engineering", "aerospace", 
+        "defence", "service", "telco", "other"
+      ];
       setAnalysisResult({
-        industry: "technology",
-        confidence: "low",
-        reasoning: "AI analysis unavailable, showing common options",
-        suggestedCategories: fallbackIndustries,
-        relevantUseCases: []
+        industry: "unknown",
+        confidence: "unknown",
+        reasoning: "Unable to analyze company - please select the appropriate industry",
+        suggestedCategories: allIndustries,
+        relevantUseCases: [],
+        requiresManualSelection: true
       });
       setShowIndustrySelection(true);
     } finally {
@@ -93,7 +101,8 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
     "defence": "Aerospace & Defence",
     "service": "Service",
     "telco": "Telecommunications",
-    "other": "Other"
+    "other": "Other",
+    "unknown": "Unable to Identify"
   };
 
   const getDisplayLabel = (industry: string) => {
@@ -146,45 +155,62 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
           <div className="space-y-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
             <div className="text-sm font-medium text-purple-900">
               <span className="flex items-center space-x-2">
-                <Sparkles className="h-4 w-4" />
-                <span>AI Analysis for "{customerName}"</span>
+                {analysisResult.industry === 'unknown' || analysisResult.requiresManualSelection ? (
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                <span>
+                  {analysisResult.industry === 'unknown' || analysisResult.requiresManualSelection 
+                    ? `Unable to identify "${customerName}" - Please select industry`
+                    : `AI Analysis for "${customerName}"`
+                  }
+                </span>
               </span>
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-purple-700">Primary Industry:</span>
-                <Badge className={`
-                  ${analysisResult.confidence === 'high' ? 'bg-green-100 text-green-800' : 
-                    analysisResult.confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' : 
-                    'bg-red-100 text-red-800'}
-                `}>
-                  {analysisResult.confidence} confidence
-                </Badge>
-              </div>
-              
-              <Button
-                onClick={() => handleIndustrySelect(analysisResult.industry)}
-                className="w-full justify-start bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                <span>{getDisplayLabel(analysisResult.industry)}</span>
-              </Button>
-              
-              {analysisResult.suggestedCategories && analysisResult.suggestedCategories.length > 1 && (
+              {analysisResult.industry !== 'unknown' && !analysisResult.requiresManualSelection && (
                 <>
-                  <div className="text-xs text-purple-600 font-medium">Alternative Options:</div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-purple-700">Primary Industry:</span>
+                    <Badge className={`
+                      ${analysisResult.confidence === 'high' ? 'bg-green-100 text-green-800' : 
+                        analysisResult.confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' : 
+                        'bg-red-100 text-red-800'}
+                    `}>
+                      {analysisResult.confidence} confidence
+                    </Badge>
+                  </div>
+                  
+                  <Button
+                    onClick={() => handleIndustrySelect(analysisResult.industry)}
+                    className="w-full justify-start bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    <span>{getDisplayLabel(analysisResult.industry)}</span>
+                  </Button>
+                </>
+              )}
+              
+              {analysisResult.suggestedCategories && analysisResult.suggestedCategories.length > 0 && (
+                <>
+                  <div className="text-xs text-purple-600 font-medium">
+                    {analysisResult.requiresManualSelection || analysisResult.industry === 'unknown' 
+                      ? 'Select the appropriate industry:' 
+                      : 'Alternative Options:'
+                    }
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                     {analysisResult.suggestedCategories
-                      .filter(cat => cat !== analysisResult.industry)
-                      .slice(0, 3)
+                      .filter(cat => cat !== analysisResult.industry || analysisResult.industry === 'unknown')
                       .map((industry) => (
                       <Button
                         key={industry}
                         variant="outline"
                         size="sm"
                         onClick={() => handleIndustrySelect(industry)}
-                        className="text-xs border-purple-300 text-purple-700 hover:bg-purple-100"
+                        className="text-xs border-purple-300 text-purple-700 hover:bg-purple-100 justify-start"
                       >
                         {getDisplayLabel(industry)}
                       </Button>
@@ -195,7 +221,12 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
               
               {analysisResult.reasoning && (
                 <div className="text-xs text-purple-600 bg-white p-2 rounded border">
-                  <strong>AI Reasoning:</strong> {analysisResult.reasoning}
+                  <strong>
+                    {analysisResult.industry === 'unknown' || analysisResult.requiresManualSelection 
+                      ? 'Note:' 
+                      : 'AI Reasoning:'
+                    }
+                  </strong> {analysisResult.reasoning}
                 </div>
               )}
 

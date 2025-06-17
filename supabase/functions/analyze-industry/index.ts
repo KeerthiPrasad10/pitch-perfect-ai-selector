@@ -121,6 +121,14 @@ const embeddedUseCaseData = [
   }
 ];
 
+const allIndustries = [
+  "manufacturing", "healthcare", "finance", "retail", "technology", 
+  "automotive", "energy", "utilities", "education", "government", 
+  "logistics", "media", "insurance", "real-estate", "agriculture", 
+  "hospitality", "construction", "engineering", "aerospace", 
+  "defence", "service", "telco", "other"
+];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -131,25 +139,40 @@ serve(async (req) => {
     console.log('Analyzing customer:', customerName);
 
     if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+      console.log('OpenAI API key not configured, returning fallback with all industries');
+      return new Response(JSON.stringify({
+        success: true,
+        analysis: {
+          industry: "unknown",
+          confidence: "low",
+          reasoning: "Unable to identify company - AI analysis unavailable. Please select the most appropriate industry from the options provided.",
+          suggestedCategories: allIndustries,
+          relevantUseCases: [],
+          requiresManualSelection: true
+        }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const prompt = `Analyze the company "${customerName}" and determine:
-1. Their primary industry category
-2. Confidence level (high/medium/low) 
+1. Their primary industry category (if identifiable)
+2. Confidence level (high/medium/low/unknown) 
 3. Brief reasoning for the classification
-4. Up to 3 alternative industry suggestions if confidence is not high
+4. If confidence is not high or if you cannot identify the company, provide ALL available industry options
 5. Based on the industry analysis, recommend ALL relevant AI use cases from the provided list that would be most valuable for this company. Don't limit to just a few - provide comprehensive recommendations that are truly justified.
 
 Available use case data for reference:
 ${JSON.stringify(embeddedUseCaseData, null, 2)}
 
+IMPORTANT: If you cannot identify the company or are uncertain about the industry classification, set confidence to "unknown" and include ALL available industries in suggestedCategories so the user can manually select the appropriate one.
+
 Respond in this JSON format:
 {
-  "industry": "primary_industry_name",
-  "confidence": "high|medium|low",
-  "reasoning": "brief explanation",
-  "suggestedCategories": ["industry1", "industry2", "industry3"],
+  "industry": "primary_industry_name_or_unknown",
+  "confidence": "high|medium|low|unknown",
+  "reasoning": "brief explanation including if company could not be identified",
+  "suggestedCategories": ["industry1", "industry2", "industry3", ...],
   "relevantUseCases": [
     {
       "title": "Use Case Title",
@@ -159,12 +182,16 @@ Respond in this JSON format:
       "implementation": "Low|Medium|High",
       "timeline": "time_range"
     }
-  ]
+  ],
+  "requiresManualSelection": true|false
 }
 
 Industry options: manufacturing, healthcare, finance, retail, technology, automotive, energy, utilities, education, government, logistics, media, insurance, real-estate, agriculture, hospitality, construction, engineering, aerospace, defence, service, telco, other
 
-IMPORTANT: For relevantUseCases, recommend ALL use cases that are genuinely applicable to this industry. If a company in manufacturing could benefit from predictive maintenance, quality control, demand forecasting, supply chain optimization, and energy optimization - recommend all of them. Don't artificially limit the recommendations.`;
+IMPORTANT: 
+- If you cannot identify the company, set "requiresManualSelection" to true and include ALL industry options in suggestedCategories
+- For relevantUseCases, recommend ALL use cases that are genuinely applicable to the identified industry (or leave empty if industry is unknown)
+- If company is unidentifiable, be honest about it in the reasoning`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -177,7 +204,7 @@ IMPORTANT: For relevantUseCases, recommend ALL use cases that are genuinely appl
         messages: [
           { 
             role: 'system', 
-            content: 'You are an expert business analyst specializing in AI use case recommendations. Provide comprehensive, justified recommendations without artificial limits.' 
+            content: 'You are an expert business analyst specializing in AI use case recommendations. Be honest if you cannot identify a company - provide all industry options for manual selection in such cases.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -201,7 +228,22 @@ IMPORTANT: For relevantUseCases, recommend ALL use cases that are genuinely appl
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       console.log('Raw AI response:', aiResponse);
-      throw new Error('Failed to parse AI analysis');
+      
+      // Fallback to unknown company with all industries
+      analysisResult = {
+        industry: "unknown",
+        confidence: "unknown",
+        reasoning: "Could not parse AI response - please select the appropriate industry manually",
+        suggestedCategories: allIndustries,
+        relevantUseCases: [],
+        requiresManualSelection: true
+      };
+    }
+
+    // Ensure we have all industries available if confidence is low or unknown
+    if (analysisResult.confidence === 'unknown' || analysisResult.confidence === 'low' || analysisResult.industry === 'unknown') {
+      analysisResult.suggestedCategories = allIndustries;
+      analysisResult.requiresManualSelection = true;
     }
 
     console.log('Parsed analysis result:', analysisResult);
@@ -215,11 +257,19 @@ IMPORTANT: For relevantUseCases, recommend ALL use cases that are genuinely appl
 
   } catch (error) {
     console.error('Error in analyze-industry function:', error);
+    
+    // Return fallback with all industries on any error
     return new Response(JSON.stringify({
-      success: false,
-      error: error.message || 'Analysis failed'
+      success: true,
+      analysis: {
+        industry: "unknown",
+        confidence: "unknown",
+        reasoning: "Analysis failed - please select the appropriate industry manually",
+        suggestedCategories: allIndustries,
+        relevantUseCases: [],
+        requiresManualSelection: true
+      }
     }), {
-      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
