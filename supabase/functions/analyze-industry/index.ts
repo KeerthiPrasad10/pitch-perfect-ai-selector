@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -129,6 +130,50 @@ const allIndustries = [
   "defence", "service", "telco", "other"
 ];
 
+async function searchCompanies(companyName: string) {
+  try {
+    const searchPrompt = `Search for companies similar to or matching "${companyName}". Provide up to 5 real companies that could match this search term, along with their primary industry. Focus on well-known companies that might be relevant. Format the response as a JSON array with objects containing 'name' and 'industry' fields.`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a business research assistant. When searching for companies, provide accurate, real company names and their industries. Always respond with valid JSON format.' 
+          },
+          { role: 'user', content: searchPrompt }
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI search API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const searchResult = data.choices[0].message.content;
+    
+    try {
+      const companies = JSON.parse(searchResult);
+      return Array.isArray(companies) ? companies : [];
+    } catch (parseError) {
+      console.error('Failed to parse company search results:', parseError);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error searching for companies:', error);
+    return [];
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -148,7 +193,8 @@ serve(async (req) => {
           reasoning: "Unable to identify company - AI analysis unavailable. Please select the most appropriate industry from the options provided.",
           suggestedCategories: allIndustries,
           relevantUseCases: [],
-          requiresManualSelection: true
+          requiresManualSelection: true,
+          suggestedCompanies: []
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -159,13 +205,13 @@ serve(async (req) => {
 1. Their primary industry category (if identifiable)
 2. Confidence level (high/medium/low/unknown) 
 3. Brief reasoning for the classification
-4. If confidence is not high or if you cannot identify the company, provide ALL available industry options
-5. Based on the industry analysis, recommend ALL relevant AI use cases from the provided list that would be most valuable for this company. Don't limit to just a few - provide comprehensive recommendations that are truly justified.
+4. If confidence is not high or if you cannot identify the company, provide relevant industry options
+5. Based on the industry analysis, recommend relevant AI use cases from the provided list
 
 Available use case data for reference:
 ${JSON.stringify(embeddedUseCaseData, null, 2)}
 
-IMPORTANT: If you cannot identify the company or are uncertain about the industry classification, set confidence to "unknown" and include ALL available industries in suggestedCategories so the user can manually select the appropriate one.
+IMPORTANT: If you cannot identify the company or are uncertain about the industry classification, set confidence to "unknown" and be honest about it.
 
 Respond in this JSON format:
 {
@@ -189,9 +235,9 @@ Respond in this JSON format:
 Industry options: manufacturing, healthcare, finance, retail, technology, automotive, energy, utilities, education, government, logistics, media, insurance, real-estate, agriculture, hospitality, construction, engineering, aerospace, defence, service, telco, other
 
 IMPORTANT: 
-- If you cannot identify the company, set "requiresManualSelection" to true and include ALL industry options in suggestedCategories
-- For relevantUseCases, recommend ALL use cases that are genuinely applicable to the identified industry (or leave empty if industry is unknown)
-- If company is unidentifiable, be honest about it in the reasoning`;
+- If you cannot identify the company, set "requiresManualSelection" to true
+- For relevantUseCases, recommend use cases that are genuinely applicable to the identified industry (or leave empty if industry is unknown)
+- Be honest if you cannot identify the company`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -204,7 +250,7 @@ IMPORTANT:
         messages: [
           { 
             role: 'system', 
-            content: 'You are an expert business analyst specializing in AI use case recommendations. Be honest if you cannot identify a company - provide all industry options for manual selection in such cases.' 
+            content: 'You are an expert business analyst specializing in AI use case recommendations. Be honest if you cannot identify a company.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -236,17 +282,21 @@ IMPORTANT:
         reasoning: "Could not parse AI response - please select the appropriate industry manually",
         suggestedCategories: allIndustries,
         relevantUseCases: [],
-        requiresManualSelection: true
+        requiresManualSelection: true,
+        suggestedCompanies: []
       };
     }
 
-    // Ensure we have all industries available if confidence is low or unknown
-    if (analysisResult.confidence === 'unknown' || analysisResult.confidence === 'low' || analysisResult.industry === 'unknown') {
+    // If company cannot be identified, search for similar companies
+    if (analysisResult.confidence === 'unknown' || analysisResult.industry === 'unknown' || analysisResult.requiresManualSelection) {
+      console.log('Company not identified, searching for similar companies...');
+      const suggestedCompanies = await searchCompanies(customerName);
+      analysisResult.suggestedCompanies = suggestedCompanies;
       analysisResult.suggestedCategories = allIndustries;
       analysisResult.requiresManualSelection = true;
     }
 
-    console.log('Parsed analysis result:', analysisResult);
+    console.log('Final analysis result:', analysisResult);
 
     return new Response(JSON.stringify({
       success: true,
@@ -267,7 +317,8 @@ IMPORTANT:
         reasoning: "Analysis failed - please select the appropriate industry manually",
         suggestedCategories: allIndustries,
         relevantUseCases: [],
-        requiresManualSelection: true
+        requiresManualSelection: true,
+        suggestedCompanies: []
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
