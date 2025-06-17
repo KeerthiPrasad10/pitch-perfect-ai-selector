@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -159,25 +158,18 @@ serve(async (req) => {
     YORKTEL - Manufacturing
     `;
 
-    // Try different common deployment names for Azure OpenAI
-    const deploymentNames = ['gpt-4o', 'gpt-4o-mini', 'gpt-35-turbo', 'gpt-4-turbo'];
-    let response;
-    let lastError;
-
-    for (const deploymentName of deploymentNames) {
-      try {
-        console.log(`Trying deployment: ${deploymentName}`);
-        response = await fetch(`https://nexus-black-internal-eastus2.openai.azure.com/openai/deployments/${deploymentName}/chat/completions?api-version=2024-08-01-preview`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: [
-              {
-                role: 'system',
-                content: `You are an industry classification expert for IFS, a leading enterprise software company. Your task is to analyze company names and determine their primary industry category.
+    console.log('Using gpt-4o deployment');
+    const response = await fetch('https://nexus-black-internal-eastus2.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'system',
+            content: `You are an industry classification expert for IFS, a leading enterprise software company. Your task is to analyze company names and determine their primary industry category.
 
 Based on the company name provided, classify it into one of these industry categories:
 - Manufacturing
@@ -200,34 +192,21 @@ Analyze the company name, consider the business context, and respond with a JSON
 }
 
 Be specific and accurate. If unsure, mark confidence as "low" and provide multiple suggested categories.`
-              },
-              {
-                role: 'user',
-                content: `Analyze the industry for this company: "${customerName}"`
-              }
-            ],
-            temperature: 0.3,
-            max_tokens: 500
-          }),
-        });
+          },
+          {
+            role: 'user',
+            content: `Analyze the industry for this company: "${customerName}"`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 500
+      }),
+    });
 
-        if (response.ok) {
-          console.log(`Successfully used deployment: ${deploymentName}`);
-          break;
-        } else {
-          const errorText = await response.text();
-          console.log(`Failed with deployment ${deploymentName}:`, errorText);
-          lastError = errorText;
-        }
-      } catch (error) {
-        console.log(`Error with deployment ${deploymentName}:`, error);
-        lastError = error.message;
-      }
-    }
-
-    if (!response || !response.ok) {
-      console.error('All deployments failed. Last error:', lastError);
-      throw new Error(`Azure OpenAI API error: All deployments failed. Last error: ${lastError}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Azure OpenAI API error:', errorText);
+      throw new Error(`Azure OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
