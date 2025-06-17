@@ -129,7 +129,46 @@ const allIndustries = [
   "defence", "service", "telco", "other"
 ];
 
+// Basic company search function that works without OpenAI
+async function searchCompaniesFallback(companyName: string) {
+  // Basic known company mapping for common companies
+  const knownCompanies = [
+    { name: "Vodafone", industry: "telco" },
+    { name: "Vodafone Group", industry: "telco" },
+    { name: "Microsoft", industry: "technology" },
+    { name: "Apple", industry: "technology" },
+    { name: "Google", industry: "technology" },
+    { name: "Amazon", industry: "retail" },
+    { name: "Tesla", industry: "automotive" },
+    { name: "BMW", industry: "automotive" },
+    { name: "Mercedes", industry: "automotive" },
+    { name: "Siemens", industry: "manufacturing" },
+    { name: "General Electric", industry: "manufacturing" },
+    { name: "Boeing", industry: "aerospace" },
+    { name: "Airbus", industry: "aerospace" },
+    { name: "ExxonMobil", industry: "energy" },
+    { name: "Shell", industry: "energy" },
+    { name: "JPMorgan", industry: "finance" },
+    { name: "Goldman Sachs", industry: "finance" },
+    { name: "Walmart", industry: "retail" },
+    { name: "Pfizer", industry: "healthcare" },
+    { name: "Johnson & Johnson", industry: "healthcare" }
+  ];
+
+  const searchTerm = companyName.toLowerCase();
+  const matches = knownCompanies.filter(company => 
+    company.name.toLowerCase().includes(searchTerm) ||
+    searchTerm.includes(company.name.toLowerCase())
+  );
+
+  return matches.slice(0, 5);
+}
+
 async function searchCompanies(companyName: string) {
+  if (!openAIApiKey) {
+    return searchCompaniesFallback(companyName);
+  }
+
   try {
     const searchPrompt = `Search for companies similar to or matching "${companyName}". Provide up to 5 real companies that could match this search term, along with their primary industry. Focus on well-known companies that might be relevant. Format the response as a JSON array with objects containing 'name' and 'industry' fields.`;
 
@@ -154,7 +193,7 @@ async function searchCompanies(companyName: string) {
 
     if (!response.ok) {
       console.error('OpenAI search API error:', response.status);
-      return [];
+      return searchCompaniesFallback(companyName);
     }
 
     const data = await response.json();
@@ -162,14 +201,14 @@ async function searchCompanies(companyName: string) {
     
     try {
       const companies = JSON.parse(searchResult);
-      return Array.isArray(companies) ? companies : [];
+      return Array.isArray(companies) ? companies : searchCompaniesFallback(companyName);
     } catch (parseError) {
       console.error('Failed to parse company search results:', parseError);
-      return [];
+      return searchCompaniesFallback(companyName);
     }
   } catch (error) {
     console.error('Error searching for companies:', error);
-    return [];
+    return searchCompaniesFallback(companyName);
   }
 }
 
@@ -182,8 +221,13 @@ serve(async (req) => {
     const { customerName } = await req.json();
     console.log('Analyzing customer:', customerName);
 
+    // Always search for similar companies regardless of OpenAI availability
+    console.log('Searching for similar companies...');
+    const suggestedCompanies = await searchCompanies(customerName);
+    console.log('Found suggested companies:', suggestedCompanies);
+
     if (!openAIApiKey) {
-      console.log('OpenAI API key not configured, returning fallback with all industries');
+      console.log('OpenAI API key not configured, returning fallback with all industries and company suggestions');
       return new Response(JSON.stringify({
         success: true,
         analysis: {
@@ -193,7 +237,7 @@ serve(async (req) => {
           suggestedCategories: allIndustries,
           relevantUseCases: [],
           requiresManualSelection: true,
-          suggestedCompanies: []
+          suggestedCompanies: suggestedCompanies
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -274,7 +318,7 @@ IMPORTANT:
       console.error('Failed to parse AI response:', parseError);
       console.log('Raw AI response:', aiResponse);
       
-      // Fallback to unknown company with all industries
+      // Fallback to unknown company with all industries and company suggestions
       analysisResult = {
         industry: "unknown",
         confidence: "unknown",
@@ -282,15 +326,15 @@ IMPORTANT:
         suggestedCategories: allIndustries,
         relevantUseCases: [],
         requiresManualSelection: true,
-        suggestedCompanies: []
+        suggestedCompanies: suggestedCompanies
       };
     }
 
-    // If company cannot be identified, search for similar companies
+    // Always include suggested companies in the response
+    analysisResult.suggestedCompanies = suggestedCompanies;
+
+    // If company cannot be identified, ensure proper fallback
     if (analysisResult.confidence === 'unknown' || analysisResult.industry === 'unknown' || analysisResult.requiresManualSelection) {
-      console.log('Company not identified, searching for similar companies...');
-      const suggestedCompanies = await searchCompanies(customerName);
-      analysisResult.suggestedCompanies = suggestedCompanies;
       analysisResult.suggestedCategories = allIndustries;
       analysisResult.requiresManualSelection = true;
       
@@ -312,8 +356,10 @@ IMPORTANT:
   } catch (error) {
     console.error('Error in analyze-industry function:', error);
     
-    // Return fallback with all industries on any error
+    // Return fallback with all industries and company search on any error
     const { customerName } = await req.json().catch(() => ({ customerName: 'Unknown' }));
+    const suggestedCompanies = await searchCompanies(customerName).catch(() => []);
+    
     return new Response(JSON.stringify({
       success: true,
       analysis: {
@@ -323,7 +369,7 @@ IMPORTANT:
         suggestedCategories: allIndustries,
         relevantUseCases: [],
         requiresManualSelection: true,
-        suggestedCompanies: []
+        suggestedCompanies: suggestedCompanies
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
