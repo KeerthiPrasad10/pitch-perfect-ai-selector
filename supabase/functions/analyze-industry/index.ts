@@ -271,7 +271,7 @@ Analyze the company name, consider the business context, and respond with a JSON
   "relevantUseCases": ["array", "of", "relevant", "use", "cases", "from", "the", "data"]
 }
 
-Be specific and accurate. If unsure, mark confidence as "low" and provide multiple suggested categories. Include relevant use cases from the uploaded data if available.`
+Be specific and accurate. If unsure, mark confidence as "low" and provide multiple suggested categories. Include relevant use cases from the uploaded data if available. IMPORTANT: Return ONLY the JSON object without any markdown formatting or code blocks.`
           },
           {
             role: 'user',
@@ -292,8 +292,14 @@ Be specific and accurate. If unsure, mark confidence as "low" and provide multip
     const data = await response.json();
     console.log('Azure OpenAI response:', data);
     
-    const content = data.choices[0].message.content;
+    let content = data.choices[0].message.content;
     console.log('Analysis result:', content);
+
+    // Clean up markdown code blocks if present
+    if (content.includes('```json')) {
+      content = content.replace(/```json\n?/g, '').replace(/\n?```/g, '').trim();
+      console.log('Cleaned content:', content);
+    }
 
     // Parse the JSON response
     let analysisResult;
@@ -301,6 +307,7 @@ Be specific and accurate. If unsure, mark confidence as "low" and provide multip
       analysisResult = JSON.parse(content);
     } catch (parseError) {
       console.error('Failed to parse JSON response:', parseError);
+      console.error('Raw content:', content);
       // Fallback parsing if JSON is not perfect
       analysisResult = {
         industry: "Other",
