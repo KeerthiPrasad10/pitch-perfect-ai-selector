@@ -1,5 +1,7 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,13 +23,88 @@ serve(async (req) => {
     }
 
     const openAIApiKey = Deno.env.get('NEXUS-BLACK-INTERNAL-OpenAI-EASTUS2');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not found');
     }
 
-    // List of known IFS customers and their industries for better matching
-    const ifsCustomers = `
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase configuration not found');
+    }
+
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Try to read the uploaded table from storage
+    let industryData = '';
+    let useCaseData = '';
+    
+    try {
+      console.log('Attempting to read industry data from storage...');
+      
+      // List files in the default bucket to find the uploaded table
+      const { data: files, error: listError } = await supabase.storage
+        .from('files')
+        .list('', { limit: 100 });
+
+      if (listError) {
+        console.log('Error listing files:', listError);
+      } else {
+        console.log('Found files:', files?.map(f => f.name));
+        
+        // Look for common table file extensions
+        const tableFile = files?.find(file => 
+          file.name.toLowerCase().includes('industry') || 
+          file.name.toLowerCase().includes('usecase') ||
+          file.name.toLowerCase().endsWith('.csv') ||
+          file.name.toLowerCase().endsWith('.json')
+        );
+
+        if (tableFile) {
+          console.log('Found table file:', tableFile.name);
+          
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from('files')
+            .download(tableFile.name);
+
+          if (!downloadError && fileData) {
+            const fileContent = await fileData.text();
+            console.log('Successfully read file content, length:', fileContent.length);
+            
+            if (tableFile.name.toLowerCase().endsWith('.json')) {
+              try {
+                const jsonData = JSON.parse(fileContent);
+                industryData = JSON.stringify(jsonData, null, 2);
+              } catch (parseError) {
+                console.log('JSON parse error:', parseError);
+                industryData = fileContent;
+              }
+            } else {
+              industryData = fileContent;
+            }
+            
+            useCaseData = `
+Based on the uploaded industry data, here are the enhanced industry classifications and use cases:
+
+${industryData}
+
+Use this data to provide more accurate industry classification and relevant use cases for the customer.
+            `;
+          } else {
+            console.log('Error downloading file:', downloadError);
+          }
+        } else {
+          console.log('No suitable table file found in storage');
+        }
+      }
+    } catch (storageError) {
+      console.log('Storage access error:', storageError);
+    }
+
+    // Fallback to existing customer data if no file found
+    const fallbackCustomerData = `
     AE Rodda & Son - Manufacturing
     EUROFEU - Manufacturing
     American Iron & Metal - Manufacturing
@@ -158,6 +235,8 @@ serve(async (req) => {
     YORKTEL - Manufacturing
     `;
 
+    const finalIndustryData = useCaseData || fallbackCustomerData;
+
     console.log('Using gpt-4o deployment');
     const response = await fetch('https://nexus-black-internal-eastus2.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview', {
       method: 'POST',
@@ -180,18 +259,19 @@ Based on the company name provided, classify it into one of these industry categ
 - Telco
 - Other
 
-Here are some known IFS customers for reference:
-${ifsCustomers}
+Here is the industry data and use case information to reference:
+${finalIndustryData}
 
 Analyze the company name, consider the business context, and respond with a JSON object containing:
 {
   "industry": "primary_industry_category",
   "confidence": "high|medium|low", 
   "reasoning": "brief explanation of why this industry was selected",
-  "suggestedCategories": ["array", "of", "possible", "industries"]
+  "suggestedCategories": ["array", "of", "possible", "industries"],
+  "relevantUseCases": ["array", "of", "relevant", "use", "cases", "from", "the", "data"]
 }
 
-Be specific and accurate. If unsure, mark confidence as "low" and provide multiple suggested categories.`
+Be specific and accurate. If unsure, mark confidence as "low" and provide multiple suggested categories. Include relevant use cases from the uploaded data if available.`
           },
           {
             role: 'user',
@@ -199,7 +279,7 @@ Be specific and accurate. If unsure, mark confidence as "low" and provide multip
           }
         ],
         temperature: 0.3,
-        max_tokens: 500
+        max_tokens: 800
       }),
     });
 
@@ -226,14 +306,16 @@ Be specific and accurate. If unsure, mark confidence as "low" and provide multip
         industry: "Other",
         confidence: "low",
         reasoning: "Could not parse AI response properly",
-        suggestedCategories: ["Manufacturing", "Service", "Other"]
+        suggestedCategories: ["Manufacturing", "Service", "Other"],
+        relevantUseCases: []
       };
     }
 
     return new Response(JSON.stringify({
       success: true,
       customerName,
-      analysis: analysisResult
+      analysis: analysisResult,
+      dataSource: useCaseData ? 'uploaded_table' : 'fallback_data'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
