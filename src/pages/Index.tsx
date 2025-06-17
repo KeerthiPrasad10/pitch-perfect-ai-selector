@@ -5,7 +5,7 @@ import { UseCaseGrid } from "@/components/UseCaseGrid";
 import { SearchFilter } from "@/components/SearchFilter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Briefcase, ChartBar, BadgeDollarSign, Users, Target, TrendingUp } from "lucide-react";
+import { ChartBar, Target, TrendingUp, Users, Briefcase } from "lucide-react";
 
 const Index = () => {
   const [selectedIndustry, setSelectedIndustry] = useState<string>("");
@@ -34,12 +34,14 @@ const Index = () => {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="bg-purple-600 p-2 rounded-lg">
-                <Target className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">IFS AI Use Case Identifier</h1>
+            <div className="flex items-center space-x-4">
+              <img 
+                src="/lovable-uploads/7cee9e86-fe76-4b83-b88e-56e0aef1eea2.png" 
+                alt="IFS Logo" 
+                className="h-10 w-auto"
+              />
+              <div className="border-l border-gray-300 pl-4">
+                <h1 className="text-xl font-bold text-gray-900">AI Use Case Identifier</h1>
                 <p className="text-sm text-gray-600">Identify perfect AI solutions for every prospect</p>
               </div>
             </div>
