@@ -5,7 +5,9 @@ import { UseCaseGrid } from "@/components/UseCaseGrid";
 import { SearchFilter } from "@/components/SearchFilter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChartBar, Target, TrendingUp, Users, Briefcase } from "lucide-react";
+import { Target, TrendingUp, Users, Briefcase, FileSpreadsheet } from "lucide-react";
+import { exportToExcel } from "@/utils/exportUtils";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [selectedIndustry, setSelectedIndustry] = useState<string>("");
@@ -14,6 +16,7 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [showResults, setShowResults] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
+  const { toast } = useToast();
 
   const handleIndustrySelected = (industry: string, customer: string, recommendations: any[] = []) => {
     setSelectedIndustry(industry);
@@ -31,6 +34,31 @@ const Index = () => {
     setShowResults(false);
   };
 
+  const handleExportReport = () => {
+    if (!showResults) {
+      toast({
+        title: "No data to export",
+        description: "Please analyze a customer first to generate a report.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      exportToExcel(customerName, selectedIndustry, aiRecommendations, searchTerm, selectedCategory);
+      toast({
+        title: "Report exported successfully",
+        description: "The Excel file has been downloaded to your computer.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "There was an error generating the Excel file.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
       {/* Header */}
@@ -39,7 +67,7 @@ const Index = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <img 
-                src="/lovable-uploads/276c78fd-f333-4917-8105-2e8759fbf881.png" 
+                src="/lovable-uploads/ifs-logo.png" 
                 alt="IFS Logo" 
                 className="h-10 w-auto"
               />
@@ -54,11 +82,14 @@ const Index = () => {
                   New Customer
                 </Button>
               )}
-              <Button variant="outline" size="sm">
-                <ChartBar className="h-4 w-4 mr-2" />
-                Analytics
+              <Button 
+                size="sm" 
+                className="bg-purple-600 hover:bg-purple-700"
+                onClick={handleExportReport}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export Report
               </Button>
-              <Button size="sm" className="bg-purple-600 hover:bg-purple-700">Export Report</Button>
             </div>
           </div>
         </div>
