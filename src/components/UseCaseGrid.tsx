@@ -16,11 +16,12 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: 
   const [selectedUseCase, setSelectedUseCase] = useState<any>(null);
 
   const filteredUseCases = useCaseData.filter(useCase => {
-    const matchesIndustry = !selectedIndustry || useCase.industries.includes(selectedIndustry);
+    // If an industry is selected, show use cases that include this industry
+    const matchesIndustry = !selectedIndustry || selectedIndustry === "all" || useCase.industries.includes(selectedIndustry);
     const matchesSearch = !searchTerm || 
       useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       useCase.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || useCase.category === selectedCategory;
+    const matchesCategory = !selectedCategory || selectedCategory === "all" || useCase.category === selectedCategory;
     
     return matchesIndustry && matchesSearch && matchesCategory;
   });
@@ -45,10 +46,10 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: 
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
-          {filteredUseCases.length} Use Cases Found
+          {filteredUseCases.length} Recommended AI Solution{filteredUseCases.length !== 1 ? 's' : ''}
         </h2>
         <div className="text-sm text-gray-600">
-          Showing relevant AI solutions for your prospect
+          Ranked by relevance and ROI potential
         </div>
       </div>
 
@@ -97,7 +98,7 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: 
                       </span>
                     </div>
                     <Button size="sm" variant="outline" className="text-xs">
-                      View Details
+                      Add to Pitch
                     </Button>
                   </div>
                 </div>
@@ -115,8 +116,8 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory }: 
       {filteredUseCases.length === 0 && (
         <div className="text-center py-12">
           <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No use cases found</h3>
-          <p className="text-gray-600">Try adjusting your filters or search terms.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No matching solutions found</h3>
+          <p className="text-gray-600">Try adjusting your search terms or category filters.</p>
         </div>
       )}
     </div>
