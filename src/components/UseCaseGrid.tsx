@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCaseData } from "@/data/useCaseData";
-import { BadgeDollarSign, Briefcase, Sparkles } from "lucide-react";
+import { BadgeDollarSign, Briefcase, Sparkles, FileText, ExternalLink } from "lucide-react";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
@@ -27,7 +27,9 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     timeline: useCase.timeline,
     industries: [selectedIndustry],
     costSavings: "TBD", // AI recommendations don't include cost savings
-    isAiRecommended: true
+    isAiRecommended: true,
+    ragEnhanced: useCase.ragEnhanced || false,
+    ragSources: useCase.ragSources || []
   }));
 
   // Filter regular use cases and add isAiRecommended property
@@ -41,7 +43,9 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     return matchesIndustry && matchesSearch && matchesCategory;
   }).map(useCase => ({
     ...useCase,
-    isAiRecommended: false
+    isAiRecommended: false,
+    ragEnhanced: false,
+    ragSources: []
   }));
 
   // Combine AI recommendations (prioritized) with filtered regular use cases
@@ -82,6 +86,11 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
               ({aiRecommendations.length} AI-tailored)
             </span>
           )}
+          {aiRecommendations.some(rec => rec.ragEnhanced) && (
+            <span className="ml-2 text-sm text-blue-600 font-normal">
+              (Document-Enhanced)
+            </span>
+          )}
         </h2>
         <div className="text-sm text-gray-600">
           Ranked by relevance and ROI potential
@@ -91,14 +100,18 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {allUseCases.map((useCase) => (
           <Card key={useCase.id} className={`hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4 ${
-            useCase.isAiRecommended ? 'border-l-purple-500 bg-gradient-to-br from-purple-50 to-white' : 'border-l-blue-500'
+            useCase.ragEnhanced ? 'border-l-blue-500 bg-gradient-to-br from-blue-50 to-white' :
+            useCase.isAiRecommended ? 'border-l-purple-500 bg-gradient-to-br from-purple-50 to-white' : 'border-l-gray-300'
           }`}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <CardTitle className="text-lg text-gray-900">{useCase.title}</CardTitle>
-                    {useCase.isAiRecommended && (
+                    {useCase.ragEnhanced && (
+                      <FileText className="h-4 w-4 text-blue-600" />
+                    )}
+                    {useCase.isAiRecommended && !useCase.ragEnhanced && (
                       <Sparkles className="h-4 w-4 text-purple-600" />
                     )}
                   </div>
@@ -108,7 +121,12 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
-                {useCase.isAiRecommended && (
+                {useCase.ragEnhanced && (
+                  <Badge className="text-xs bg-blue-100 text-blue-800">
+                    Document Enhanced
+                  </Badge>
+                )}
+                {useCase.isAiRecommended && !useCase.ragEnhanced && (
                   <Badge className="text-xs bg-purple-100 text-purple-800">
                     AI Recommended
                   </Badge>
@@ -135,6 +153,24 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
                   <span className="text-gray-600">Timeline:</span>
                   <span className="font-medium text-gray-900">{useCase.timeline}</span>
                 </div>
+
+                {useCase.ragSources && useCase.ragSources.length > 0 && (
+                  <div className="border-t pt-3">
+                    <div className="text-xs text-gray-600 mb-2">
+                      <strong>Document Sources:</strong>
+                    </div>
+                    <div className="space-y-1">
+                      {useCase.ragSources.slice(0, 2).map((source: any, index: number) => (
+                        <div key={index} className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                          <div className="font-medium">{source.file_name}</div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {Math.round(source.similarity * 100)}% match
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t pt-3">
                   <div className="flex items-center justify-between">

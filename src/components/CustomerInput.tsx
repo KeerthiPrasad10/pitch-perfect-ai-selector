@@ -1,311 +1,189 @@
 
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Building2, Check, Sparkles, AlertCircle, Globe, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Search, Building2, TrendingUp, Sparkles, FileText, Loader2 } from "lucide-react";
 
 interface CustomerInputProps {
-  onIndustrySelected: (industry: string, customerName: string, aiRecommendations?: any[]) => void;
+  onIndustrySelected: (industry: string, customer: string, recommendations: any[]) => void;
 }
 
 export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
   const [customerName, setCustomerName] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const [showIndustrySelection, setShowIndustrySelection] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const { toast } = useToast();
 
-  const analyzeIndustry = async (companyName: string) => {
-    setIsSearching(true);
-    
+  const searchDocuments = async (query: string) => {
     try {
-      console.log('Calling analyze-industry function for:', companyName);
-      
-      const { data, error } = await supabase.functions.invoke('analyze-industry', {
-        body: { customerName: companyName }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data, error } = await supabase.functions.invoke('rag-query', {
+        body: {
+          query: `${query} AI use cases solutions recommendations`,
+          maxResults: 3,
+        },
       });
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
-      }
+      if (error) throw error;
+      return data.success ? data : null;
+    } catch (error) {
+      console.log('RAG search not available or no documents uploaded');
+      return null;
+    }
+  };
 
-      console.log('Analysis result:', data);
-      
+  const enhanceRecommendationsWithRAG = async (recommendations: any[], customerName: string, industry: string) => {
+    const ragData = await searchDocuments(`${customerName} ${industry} AI solutions recommendations`);
+    
+    if (!ragData || !ragData.answer) {
+      return recommendations;
+    }
+
+    // Extract insights from RAG answer to enhance recommendations
+    const ragInsights = ragData.answer;
+    
+    return recommendations.map((rec, index) => ({
+      ...rec,
+      description: index === 0 ? `${rec.description} Based on your documents: ${ragInsights.substring(0, 150)}...` : rec.description,
+      ragEnhanced: index === 0,
+      ragSources: index === 0 ? ragData.sources : undefined
+    }));
+  };
+
+  const analyzeCustomer = async () => {
+    if (!customerName.trim()) return;
+
+    setLoading(true);
+    setSuggestions([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-industry', {
+        body: { customerName: customerName.trim() }
+      });
+
+      if (error) throw error;
+
       if (data.success) {
-        setAnalysisResult(data.analysis);
-        setShowIndustrySelection(true);
-        setSelectedCompany(companyName);
+        const enhancedRecommendations = await enhanceRecommendationsWithRAG(
+          data.relevantUseCases || [], 
+          customerName, 
+          data.industry
+        );
+
+        setSuggestions(data.suggestedCompanies || []);
+        onIndustrySelected(data.industry, customerName, enhancedRecommendations);
+        
+        toast({
+          title: "Analysis Complete",
+          description: `Identified ${data.industry} industry with ${enhancedRecommendations.length} AI-enhanced recommendations.`,
+        });
       } else {
         throw new Error(data.error || 'Analysis failed');
       }
     } catch (error) {
-      console.error('Error analyzing industry:', error);
-      // Fallback to unknown with all industries
-      const allIndustries = [
-        "manufacturing", "healthcare", "finance", "retail", "technology", 
-        "automotive", "energy", "utilities", "education", "government", 
-        "logistics", "media", "insurance", "real-estate", "agriculture", 
-        "hospitality", "construction", "engineering", "aerospace", 
-        "defence", "service", "telco", "other"
-      ];
-      setAnalysisResult({
-        industry: "unknown",
-        confidence: "unknown",
-        reasoning: `Unable to identify "${companyName}" in IFS customer list - Please select the industry.`,
-        suggestedCategories: allIndustries,
-        relevantUseCases: [],
-        requiresManualSelection: true,
-        suggestedCompanies: []
+      console.error('Error analyzing customer:', error);
+      toast({
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : 'An error occurred',
+        variant: "destructive",
       });
-      setShowIndustrySelection(true);
-      setSelectedCompany(companyName);
     } finally {
-      setIsSearching(false);
+      setLoading(false);
     }
   };
 
-  const handleSearch = () => {
-    if (customerName.trim()) {
-      analyzeIndustry(customerName);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !loading) {
+      analyzeCustomer();
     }
   };
-
-  const handleCompanySelect = (companyName: string, companyIndustry: string) => {
-    setSelectedCompany(companyName);
-    setCustomerName(companyName);
-    
-    // Filter industries to show the company's industry first, then others
-    const filteredIndustries = analysisResult?.suggestedCategories?.filter(
-      (industry: string) => industry.toLowerCase() === companyIndustry.toLowerCase()
-    ) || [];
-    
-    const otherIndustries = analysisResult?.suggestedCategories?.filter(
-      (industry: string) => industry.toLowerCase() !== companyIndustry.toLowerCase()
-    ) || [];
-
-    setAnalysisResult({
-      ...analysisResult,
-      industry: companyIndustry.toLowerCase(),
-      confidence: "medium",
-      reasoning: `Selected company: ${companyName} - ${companyIndustry} industry`,
-      suggestedCategories: [...filteredIndustries, ...otherIndustries],
-      primaryIndustry: companyIndustry.toLowerCase()
-    });
-  };
-
-  const handleIndustrySelect = (industry: string) => {
-    // Pass the AI recommendations along with the industry selection
-    onIndustrySelected(industry, selectedCompany || customerName, analysisResult?.relevantUseCases || []);
-    setShowIndustrySelection(false);
-    setAnalysisResult(null);
-  };
-
-  const industryLabels: { [key: string]: string } = {
-    "healthcare": "Healthcare & Life Sciences",
-    "finance": "Financial Services",
-    "retail": "Retail & E-commerce",
-    "manufacturing": "Manufacturing",
-    "technology": "Technology & Software",
-    "automotive": "Automotive",
-    "energy": "Energy & Utilities",
-    "utilities": "Energy & Utilities",
-    "resources": "Energy, Utilities & Resources",
-    "education": "Education",
-    "government": "Government & Public Sector",
-    "logistics": "Logistics & Supply Chain",
-    "media": "Media & Entertainment",
-    "insurance": "Insurance",
-    "real-estate": "Real Estate",
-    "agriculture": "Agriculture",
-    "hospitality": "Hospitality & Travel",
-    "construction": "Construction & Engineering",
-    "engineering": "Construction & Engineering",
-    "aerospace": "Aerospace & Defence",
-    "defence": "Aerospace & Defence",
-    "service": "Service",
-    "telco": "Telecommunications",
-    "other": "Other",
-    "unknown": "Unable to Identify"
-  };
-
-  const getDisplayLabel = (industry: string) => {
-    return industryLabels[industry.toLowerCase()] || industry.charAt(0).toUpperCase() + industry.slice(1);
-  };
-
-  const isCompanyIdentified = analysisResult && 
-    analysisResult.industry !== 'unknown' && 
-    !analysisResult.requiresManualSelection &&
-    analysisResult.confidence !== 'unknown';
 
   return (
-    <Card className="mb-8 border-purple-200 shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100">
-        <CardTitle className="flex items-center space-x-2">
-          <div className="bg-purple-600 p-2 rounded-lg">
-            <Building2 className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-purple-900">IFS Customer Analysis</span>
-          <Sparkles className="h-4 w-4 text-purple-600" />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-6">
-        <div className="flex space-x-3">
-          <div className="flex-1">
+    <div className="space-y-6">
+      <Card className="bg-white/90 backdrop-blur-sm shadow-xl border-purple-200 rounded-2xl">
+        <CardHeader className="text-center pb-4">
+          <CardTitle className="text-xl font-semibold bg-gradient-to-r from-purple-700 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center space-x-2">
+            <Building2 className="h-6 w-6 text-purple-600" />
+            <span>Customer Analysis</span>
+          </CardTitle>
+          <p className="text-slate-600 text-sm">
+            Enter a customer or prospect name to identify their industry and discover relevant AI solutions
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex space-x-3">
             <Input
               type="text"
-              placeholder="Enter customer/company name..."
+              placeholder="e.g., Microsoft, Tesla, Maersk..."
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="text-base border-purple-200 focus:border-purple-500"
+              onKeyPress={handleKeyPress}
+              disabled={loading}
+              className="flex-1 border-purple-200 focus:border-purple-400 focus:ring-purple-400"
             />
+            <Button 
+              onClick={analyzeCustomer}
+              disabled={!customerName.trim() || loading}
+              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-8"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Analyze
+                </>
+              )}
+            </Button>
           </div>
-          <Button 
-            onClick={handleSearch}
-            disabled={!customerName.trim() || isSearching}
-            className="px-6 bg-purple-600 hover:bg-purple-700"
-          >
-            {isSearching ? (
-              <>
-                <Search className="h-4 w-4 mr-2 animate-spin" />
-                Analyzing with AI...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Analyze
-              </>
-            )}
-          </Button>
-        </div>
 
-        {showIndustrySelection && analysisResult && (
-          <div className="space-y-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-            {/* Company Identification Status */}
-            {isCompanyIdentified ? (
-              <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-green-900 mb-1">
-                    ✅ Company Identified: <span className="font-semibold">{selectedCompany || customerName}</span>
-                  </div>
-                  <div className="text-xs text-green-700">
-                    Industry: {getDisplayLabel(analysisResult.industry)} • 
-                    Confidence: <span className="capitalize">{analysisResult.confidence}</span>
-                  </div>
-                  <div className="text-xs text-green-600 mt-1">
-                    {analysisResult.reasoning}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-amber-900 mb-1">
-                    Company Selection Needed
-                  </div>
-                  <div className="text-xs text-amber-700">
-                    {analysisResult.reasoning}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Primary Industry Selection (if identified) */}
-            {isCompanyIdentified && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-purple-700 font-medium">Confirmed Industry Classification:</span>
-                  <Badge className="bg-green-100 text-green-800">
-                    {analysisResult.confidence} confidence
-                  </Badge>
-                </div>
-                
-                <Button
-                  onClick={() => handleIndustrySelect(analysisResult.industry)}
-                  className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
+          <div className="flex items-center justify-center space-x-6 text-xs text-slate-500">
+            <div className="flex items-center space-x-1">
+              <TrendingUp className="h-3 w-3" />
+              <span>AI-Powered</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <FileText className="h-3 w-3" />
+              <span>Document-Enhanced</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Sparkles className="h-3 w-3" />
+              <span>Real-time Analysis</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {suggestions.length > 0 && (
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 rounded-2xl">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-blue-900 flex items-center space-x-2">
+              <Building2 className="h-5 w-5" />
+              <span>Similar Companies</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.slice(0, 6).map((company, index) => (
+                <Badge 
+                  key={index} 
+                  variant="secondary" 
+                  className="bg-white/80 text-blue-800 border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors"
+                  onClick={() => setCustomerName(company.name)}
                 >
-                  <Check className="h-4 w-4 mr-2" />
-                  <span>Proceed with {getDisplayLabel(analysisResult.industry)}</span>
-                </Button>
-              </div>
-            )}
-            
-            {/* Suggested Companies Section */}
-            {analysisResult.suggestedCompanies && analysisResult.suggestedCompanies.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-xs text-purple-600 font-medium flex items-center space-x-1">
-                  <Globe className="h-3 w-3" />
-                  <span>
-                    {isCompanyIdentified ? "Similar Companies:" : "Did you mean one of these companies?"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
-                  {analysisResult.suggestedCompanies.map((company: any, index: number) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCompanySelect(company.name, company.industry)}
-                      className="text-xs border-purple-300 text-purple-700 hover:bg-purple-100 justify-start h-auto py-2"
-                    >
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{company.name}</span>
-                        <span className="text-xs text-purple-500">{getDisplayLabel(company.industry)}</span>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Alternative Industry Selection (if needed) */}
-            {(!isCompanyIdentified || analysisResult.suggestedCategories?.length > 1) && (
-              <div className="space-y-3">
-                <div className="text-xs text-purple-600 font-medium">
-                  {isCompanyIdentified ? "Or select a different industry:" : "Select the correct industry:"}
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                  {analysisResult.suggestedCategories
-                    ?.filter((cat: string) => !isCompanyIdentified || cat !== analysisResult.industry)
-                    .slice(0, isCompanyIdentified ? 9 : analysisResult.suggestedCategories.length)
-                    .map((industry: string) => (
-                    <Button
-                      key={industry}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleIndustrySelect(industry)}
-                      className={`text-xs border-purple-300 text-purple-700 hover:bg-purple-100 justify-start ${
-                        industry.toLowerCase() === analysisResult.primaryIndustry ? 'bg-purple-100 border-purple-500' : ''
-                      }`}
-                    >
-                      {getDisplayLabel(industry)}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {analysisResult.relevantUseCases && analysisResult.relevantUseCases.length > 0 && (
-              <div className="text-xs text-purple-600 bg-white p-2 rounded border">
-                <strong>AI Found:</strong> {analysisResult.relevantUseCases.length} tailored use case{analysisResult.relevantUseCases.length !== 1 ? 's' : ''} for this industry
-              </div>
-            )}
-            
-            <p className="text-xs text-purple-500">
-              {isCompanyIdentified 
-                ? "Click 'Proceed' to continue with the identified industry, or select a different option above."
-                : "Select the most relevant industry to see tailored AI use cases"
-              }
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                  {company.name}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
