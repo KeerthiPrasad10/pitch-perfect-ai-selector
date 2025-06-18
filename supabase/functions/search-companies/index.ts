@@ -194,7 +194,7 @@ async function searchSimilarCompaniesOnline(companyName: string) {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a business research assistant. Provide accurate information about real companies and their industries. Always respond with valid JSON format only.' 
+            content: 'You are a business research assistant. Provide accurate information about real companies and their industries. Always respond with valid JSON format only, no markdown formatting.' 
           },
           { role: 'user', content: searchPrompt }
         ],
@@ -213,6 +213,9 @@ async function searchSimilarCompaniesOnline(companyName: string) {
     // Clean up the response if it has markdown formatting
     if (searchResult.includes('```json')) {
       searchResult = searchResult.replace(/```json\n?/, '').replace(/\n?```/, '');
+    }
+    if (searchResult.includes('```')) {
+      searchResult = searchResult.replace(/```\n?/, '').replace(/\n?```/, '');
     }
     
     try {

@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -183,7 +184,7 @@ async function searchCompanies(companyName: string) {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a business research assistant. When searching for companies, provide accurate, real company names and their industries. Always respond with valid JSON format.' 
+            content: 'You are a business research assistant. When searching for companies, provide accurate, real company names and their industries. Always respond with valid JSON format only, no markdown formatting.' 
           },
           { role: 'user', content: searchPrompt }
         ],
@@ -197,7 +198,15 @@ async function searchCompanies(companyName: string) {
     }
 
     const data = await response.json();
-    const searchResult = data.choices[0].message.content;
+    let searchResult = data.choices[0].message.content;
+    
+    // Clean up the response if it has markdown formatting
+    if (searchResult.includes('```json')) {
+      searchResult = searchResult.replace(/```json\n?/, '').replace(/\n?```/, '');
+    }
+    if (searchResult.includes('```')) {
+      searchResult = searchResult.replace(/```\n?/, '').replace(/\n?```/, '');
+    }
     
     try {
       const companies = JSON.parse(searchResult);
@@ -256,7 +265,7 @@ ${JSON.stringify(embeddedUseCaseData, null, 2)}
 
 IMPORTANT: If you cannot identify the company or are uncertain about the industry classification, set confidence to "unknown" and be honest about it.
 
-Respond in this JSON format:
+Respond in this JSON format (NO MARKDOWN FORMATTING):
 {
   "industry": "primary_industry_name_or_unknown",
   "confidence": "high|medium|low|unknown",
@@ -280,7 +289,8 @@ Industry options: manufacturing, healthcare, finance, retail, technology, automo
 IMPORTANT: 
 - If you cannot identify the company, set "requiresManualSelection" to true
 - For relevantUseCases, recommend use cases that are genuinely applicable to the identified industry (or leave empty if industry is unknown)
-- Be honest if you cannot identify the company`;
+- Be honest if you cannot identify the company
+- Respond with valid JSON only, no markdown code blocks`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -293,7 +303,7 @@ IMPORTANT:
         messages: [
           { 
             role: 'system', 
-            content: 'You are an expert business analyst specializing in AI use case recommendations. Be honest if you cannot identify a company.' 
+            content: 'You are an expert business analyst specializing in AI use case recommendations. Be honest if you cannot identify a company. Always respond with valid JSON only, no markdown formatting.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -308,8 +318,16 @@ IMPORTANT:
     const data = await response.json();
     console.log('OpenAI response:', data);
 
-    const aiResponse = data.choices[0].message.content;
+    let aiResponse = data.choices[0].message.content;
     console.log('AI response content:', aiResponse);
+
+    // Clean up the response if it has markdown formatting
+    if (aiResponse.includes('```json')) {
+      aiResponse = aiResponse.replace(/```json\n?/, '').replace(/\n?```/, '');
+    }
+    if (aiResponse.includes('```')) {
+      aiResponse = aiResponse.replace(/```\n?/, '').replace(/\n?```/, '');
+    }
 
     let analysisResult;
     try {
