@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +50,6 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
         return recommendations;
       }
 
-      // Extract insights from RAG answer to enhance recommendations
       const ragInsights = ragData.answer;
       
       return recommendations.map((rec, index) => ({
@@ -66,6 +64,24 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
     }
   };
 
+  const searchSimilarCompanies = async (companyName: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('search-companies', {
+        body: { companyName: companyName.trim() }
+      });
+
+      if (error) {
+        console.log('Error searching companies:', error);
+        return [];
+      }
+
+      return data?.suggestions || [];
+    } catch (error) {
+      console.log('Error searching companies:', error);
+      return [];
+    }
+  };
+
   const analyzeCustomer = async () => {
     if (!customerName.trim()) return;
 
@@ -75,6 +91,11 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
     setNeedsSelection(false);
 
     try {
+      // First, get similar company suggestions
+      const similarCompanies = await searchSimilarCompanies(customerName);
+      setSuggestions(similarCompanies);
+
+      // Then analyze the industry
       const { data, error } = await supabase.functions.invoke('analyze-industry', {
         body: { customerName: customerName.trim() }
       });
@@ -96,11 +117,9 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
             confidence: data.analysis.confidence,
             reasoning: data.analysis.reasoning
           });
-          setSuggestions(data.suggestedCompanies || []);
         } else {
           // Company needs manual selection
           setNeedsSelection(true);
-          setSuggestions(data.suggestedCompanies || []);
         }
         
         toast({
@@ -148,6 +167,39 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
         description: error instanceof Error ? error.message : 'An error occurred',
         variant: "destructive",
       });
+    }
+  };
+
+  const selectSuggestedCompany = async (companyName: string) => {
+    setCustomerName(companyName);
+    
+    // Automatically analyze the selected company
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-industry', {
+        body: { customerName: companyName }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        const enhancedRecommendations = await enhanceRecommendationsWithRAG(
+          data.relevantUseCases || [], 
+          companyName, 
+          data.industry
+        );
+
+        onIndustrySelected(data.industry, companyName, enhancedRecommendations);
+      }
+    } catch (error) {
+      console.error('Error analyzing selected company:', error);
+      toast({
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : 'An error occurred',
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -283,7 +335,7 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
       )}
 
       {/* Similar Companies */}
-      {suggestions.length > 0 && (identifiedCompany || needsSelection) && (
+      {suggestions.length > 0 && (
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 rounded-2xl">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg text-blue-900 flex items-center space-x-2">
@@ -293,17 +345,23 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {suggestions.slice(0, 6).map((company, index) => (
+              {suggestions.slice(0, 8).map((company, index) => (
                 <Badge 
                   key={index} 
                   variant="secondary" 
                   className="bg-white/80 text-blue-800 border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors"
-                  onClick={() => setCustomerName(company.name)}
+                  onClick={() => selectSuggestedCompany(company.name)}
                 >
                   {company.name}
+                  {company.isIFSCustomer && (
+                    <span className="ml-1 text-xs bg-purple-100 text-purple-700 px-1 rounded">IFS</span>
+                  )}
                 </Badge>
               ))}
             </div>
+            <p className="text-xs text-blue-600 mt-2">
+              Click on any company name to analyze it directly
+            </p>
           </CardContent>
         </Card>
       )}
