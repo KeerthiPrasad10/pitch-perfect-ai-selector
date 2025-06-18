@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCaseData } from "@/data/useCaseData";
-import { BadgeDollarSign, Briefcase, Sparkles, FileText, ExternalLink } from "lucide-react";
+import { BadgeDollarSign, Briefcase, Sparkles, FileText } from "lucide-react";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
@@ -14,23 +14,21 @@ interface UseCaseGridProps {
 }
 
 export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, aiRecommendations = [] }: UseCaseGridProps) => {
-  const [selectedUseCase, setSelectedUseCase] = useState<any>(null);
-
   // Convert AI recommendations to the format expected by the grid
-  const aiUseCases = aiRecommendations.map((useCase, index) => ({
+  const aiUseCases = Array.isArray(aiRecommendations) ? aiRecommendations.map((useCase, index) => ({
     id: `ai-${index}`,
-    title: useCase.title,
-    description: useCase.description,
-    category: useCase.category,
-    roi: useCase.roi.replace('%', ''), // Remove % sign if present
-    implementation: useCase.implementation,
-    timeline: useCase.timeline,
+    title: useCase?.title || 'AI Recommendation',
+    description: useCase?.description || 'No description available',
+    category: useCase?.category || 'general',
+    roi: typeof useCase?.roi === 'string' ? useCase.roi.replace('%', '') : String(useCase?.roi || '0'),
+    implementation: useCase?.implementation || 'Medium',
+    timeline: useCase?.timeline || 'TBD',
     industries: [selectedIndustry],
-    costSavings: "TBD", // AI recommendations don't include cost savings
+    costSavings: "TBD",
     isAiRecommended: true,
-    ragEnhanced: useCase.ragEnhanced || false,
-    ragSources: useCase.ragSources || []
-  }));
+    ragEnhanced: useCase?.ragEnhanced || false,
+    ragSources: useCase?.ragSources || []
+  })) : [];
 
   // Filter regular use cases and add isAiRecommended property
   const filteredRegularUseCases = useCaseData.filter(useCase => {
@@ -61,7 +59,7 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
   ];
 
   const getRoiColor = (roi: string) => {
-    const roiValue = parseInt(roi);
+    const roiValue = parseInt(roi) || 0;
     if (roiValue >= 200) return "bg-green-100 text-green-800";
     if (roiValue >= 100) return "bg-yellow-100 text-yellow-800";
     return "bg-blue-100 text-blue-800";
@@ -86,7 +84,7 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
               ({aiRecommendations.length} AI-tailored)
             </span>
           )}
-          {aiRecommendations.some(rec => rec.ragEnhanced) && (
+          {aiRecommendations.some(rec => rec?.ragEnhanced) && (
             <span className="ml-2 text-sm text-blue-600 font-normal">
               (Document-Enhanced)
             </span>
@@ -162,9 +160,9 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
                     <div className="space-y-1">
                       {useCase.ragSources.slice(0, 2).map((source: any, index: number) => (
                         <div key={index} className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                          <div className="font-medium">{source.file_name}</div>
+                          <div className="font-medium">{source?.file_name || 'Unknown file'}</div>
                           <div className="text-xs text-gray-400 mt-1">
-                            {Math.round(source.similarity * 100)}% match
+                            {Math.round((source?.similarity || 0) * 100)}% match
                           </div>
                         </div>
                       ))}
@@ -187,8 +185,8 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
                 </div>
 
                 <div className="text-xs text-gray-500">
-                  <strong>Best for:</strong> {useCase.industries.slice(0, 2).join(', ')}
-                  {useCase.industries.length > 2 && ` +${useCase.industries.length - 2} more`}
+                  <strong>Best for:</strong> {useCase.industries?.slice(0, 2).join(', ')}
+                  {useCase.industries?.length > 2 && ` +${useCase.industries.length - 2} more`}
                 </div>
               </div>
             </CardContent>

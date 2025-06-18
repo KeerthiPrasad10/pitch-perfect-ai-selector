@@ -30,30 +30,38 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
         },
       });
 
-      if (error) throw error;
-      return data.success ? data : null;
+      if (error) {
+        console.log('RAG search error:', error);
+        return null;
+      }
+      return data?.success ? data : null;
     } catch (error) {
-      console.log('RAG search not available or no documents uploaded');
+      console.log('RAG search not available or error occurred:', error);
       return null;
     }
   };
 
   const enhanceRecommendationsWithRAG = async (recommendations: any[], customerName: string, industry: string) => {
-    const ragData = await searchDocuments(`${customerName} ${industry} AI solutions recommendations`);
-    
-    if (!ragData || !ragData.answer) {
+    try {
+      const ragData = await searchDocuments(`${customerName} ${industry} AI solutions recommendations`);
+      
+      if (!ragData?.answer) {
+        return recommendations;
+      }
+
+      // Extract insights from RAG answer to enhance recommendations
+      const ragInsights = ragData.answer;
+      
+      return recommendations.map((rec, index) => ({
+        ...rec,
+        description: index === 0 ? `${rec.description} Based on your documents: ${ragInsights.substring(0, 150)}...` : rec.description,
+        ragEnhanced: index === 0,
+        ragSources: index === 0 ? ragData.sources : undefined
+      }));
+    } catch (error) {
+      console.log('Error enhancing recommendations with RAG:', error);
       return recommendations;
     }
-
-    // Extract insights from RAG answer to enhance recommendations
-    const ragInsights = ragData.answer;
-    
-    return recommendations.map((rec, index) => ({
-      ...rec,
-      description: index === 0 ? `${rec.description} Based on your documents: ${ragInsights.substring(0, 150)}...` : rec.description,
-      ragEnhanced: index === 0,
-      ragSources: index === 0 ? ragData.sources : undefined
-    }));
   };
 
   const analyzeCustomer = async () => {
@@ -69,7 +77,7 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
 
       if (error) throw error;
 
-      if (data.success) {
+      if (data?.success) {
         const enhancedRecommendations = await enhanceRecommendationsWithRAG(
           data.relevantUseCases || [], 
           customerName, 
@@ -84,7 +92,7 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
           description: `Identified ${data.industry} industry with ${enhancedRecommendations.length} AI-enhanced recommendations.`,
         });
       } else {
-        throw new Error(data.error || 'Analysis failed');
+        throw new Error(data?.error || 'Analysis failed');
       }
     } catch (error) {
       console.error('Error analyzing customer:', error);
