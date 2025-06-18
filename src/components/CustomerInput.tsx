@@ -295,12 +295,12 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
                 {analysisResult.customerType === 'customer' ? (
                   <>
                     <UserCheck className="h-5 w-5 text-green-600" />
-                    <span>✅ IFS Customer: {customerName}</span>
+                    <span>✅ IFS Customer: {analysisResult.companyDetails?.formalName || customerName}</span>
                   </>
                 ) : (
                   <>
                     <Users className="h-5 w-5 text-blue-600" />
-                    <span>🎯 Prospect: {customerName}</span>
+                    <span>🎯 {analysisResult.companyDetails?.formalName || customerName}</span>
                   </>
                 )}
               </CardTitle>
@@ -313,12 +313,42 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
                     {analysisResult.industry}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Status:</span>
-                  <Badge className={analysisResult.customerType === 'customer' ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
-                    {analysisResult.customerType === 'customer' ? 'IFS Customer' : 'Prospect'}
-                  </Badge>
-                </div>
+                
+                {analysisResult.customerType === 'customer' && (
+                  <>
+                    {analysisResult.companyDetails?.ifsVersion && (
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">IFS Version:</span>
+                        <Badge className="bg-green-100 text-green-800">
+                          {analysisResult.companyDetails.ifsVersion}
+                        </Badge>
+                      </div>
+                    )}
+                    {analysisResult.companyDetails?.customerSince && (
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Customer Since:</span>
+                        <Badge className="bg-green-100 text-green-800">
+                          {analysisResult.companyDetails.customerSince}
+                        </Badge>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {analysisResult.companyDetails && (
+                  <div className="mb-2">
+                    <span className="text-sm font-medium text-gray-700">Company Details:</span>
+                    <div className="text-sm text-gray-600 mt-1">
+                      {analysisResult.companyDetails.description}
+                      {analysisResult.companyDetails.revenue && (
+                        <span className="ml-2">• Revenue: {analysisResult.companyDetails.revenue}</span>
+                      )}
+                      {analysisResult.companyDetails.employees && (
+                        <span className="ml-2">• Employees: {analysisResult.companyDetails.employees}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 {analysisResult.customerType === 'customer' && analysisResult.currentUseCases && analysisResult.currentUseCases.length > 0 && (
                   <div className="mb-2">

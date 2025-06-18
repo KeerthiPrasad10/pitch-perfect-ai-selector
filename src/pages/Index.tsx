@@ -254,34 +254,4 @@ const Index = () => {
   );
 };
 
-function handleExportReport() {
-  if (!showResults) {
-    toast({
-      title: "No data to export",
-      description: "Please analyze a customer first to generate a report.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  try {
-    exportToExcel(customerName, selectedIndustry, aiRecommendations, searchTerm, selectedCategory);
-    toast({
-      title: "Report exported successfully",
-      description: "The Excel file has been downloaded to your computer.",
-    });
-  } catch (error) {
-    toast({
-      title: "Export failed",
-      description: "There was an error generating the Excel file.",
-      variant: "destructive",
-    });
-  }
-}
-
-function formatIndustryName(industry: string) {
-  if (!industry || typeof industry !== 'string') return '';
-  return industry.charAt(0).toUpperCase() + industry.slice(1);
-}
-
 export default Index;

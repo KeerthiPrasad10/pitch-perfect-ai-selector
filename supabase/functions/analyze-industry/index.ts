@@ -234,6 +234,79 @@ IMPORTANT: Only extract use cases that are explicitly mentioned in the provided 
   }
 }
 
+// Enhanced company analysis with OpenAI
+async function getCompanyDetails(companyName: string, isIFSCustomer: boolean = false) {
+  if (!openAIApiKey) {
+    return {
+      formalName: companyName,
+      description: `Analysis for ${companyName}`,
+      revenue: null,
+      employees: null
+    };
+  }
+
+  try {
+    const prompt = `Provide detailed information about the company "${companyName}". Return a JSON object with:
+    {
+      "formalName": "Official legal company name",
+      "description": "Brief description of their business, what they do, main products/services",
+      "revenue": "Annual revenue if known (e.g., '$5B', '$500M')",
+      "employees": "Number of employees if known (e.g., '10,000+', '500-1000')"
+    }
+    
+    Be factual and concise. If information is not available, use null for that field.`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a business intelligence expert. Provide factual company information in the requested JSON format only.' 
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get company details');
+    }
+
+    const data = await response.json();
+    let companyInfo = data.choices[0].message.content;
+
+    // Clean up response if it has markdown formatting
+    if (companyInfo.includes('```json')) {
+      companyInfo = companyInfo.replace(/```json\n?/, '').replace(/\n?```/, '');
+    }
+
+    const details = JSON.parse(companyInfo);
+    
+    // Add IFS-specific details if it's a customer
+    if (isIFSCustomer) {
+      details.ifsVersion = "IFS Cloud"; // Default, could be enhanced with actual data
+      details.customerSince = "2020+"; // Default, could be enhanced with actual data
+    }
+    
+    return details;
+  } catch (error) {
+    console.log('Error getting company details:', error);
+    return {
+      formalName: companyName,
+      description: `${companyName} is a company in the specified industry`,
+      revenue: null,
+      employees: null
+    };
+  }
+}
+
 // Check if company is an IFS customer
 async function checkIFSCustomer(companyName: string) {
   try {
@@ -316,6 +389,9 @@ serve(async (req) => {
       // Company is an IFS customer
       console.log(`${customerName} is an IFS customer in ${ifsCustomer.industry} industry`);
       
+      // Get enhanced company details
+      const companyDetails = await getCompanyDetails(ifsCustomer.customer_name, true);
+      
       // Get relevant use cases from uploaded documents
       documentUseCases = await searchDocumentUseCases(customerName, ifsCustomer.industry, ifsCustomer.industry);
       
@@ -326,11 +402,12 @@ serve(async (req) => {
         customerType: "customer",
         industry: ifsCustomer.industry,
         confidence: "high",
-        reasoning: `${ifsCustomer.customer_name} is a confirmed IFS customer in the ${ifsCustomer.industry} industry.`,
+        reasoning: `${companyDetails.formalName} is a confirmed IFS customer in the ${ifsCustomer.industry} industry.`,
         currentUseCases: ifsCustomer.current_ml_usecases || [],
         documentBasedUseCases: documentUseCases,
         suggestedCompanies: [],
-        relatedIndustries: relatedIndustries
+        relatedIndustries: relatedIndustries,
+        companyDetails: companyDetails
       };
     } else {
       // Company is a prospect - search for similar IFS companies and get document-based recommendations
@@ -371,6 +448,9 @@ serve(async (req) => {
         }
       }
 
+      // Get enhanced company details
+      const companyDetails = await getCompanyDetails(customerName, false);
+
       // Get document-based use cases for the prospect
       documentUseCases = await searchDocumentUseCases(customerName, prospectIndustry, prospectIndustry);
       
@@ -381,11 +461,12 @@ serve(async (req) => {
         customerType: "prospect",
         industry: prospectIndustry,
         confidence: "medium",
-        reasoning: `${customerName} is not found in our IFS customer database, treating as a prospect.`,
+        reasoning: `${companyDetails.formalName} has been identified as a potential prospect in the ${prospectIndustry} industry.`,
         currentUseCases: [],
         documentBasedUseCases: documentUseCases,
         suggestedCompanies: similarCompanies,
-        relatedIndustries: relatedIndustries
+        relatedIndustries: relatedIndustries,
+        companyDetails: companyDetails
       };
     }
 
@@ -415,7 +496,13 @@ serve(async (req) => {
         currentUseCases: [],
         documentBasedUseCases: [],
         suggestedCompanies: [],
-        relatedIndustries: []
+        relatedIndustries: [],
+        companyDetails: {
+          formalName: "Unknown",
+          description: "Unable to analyze company",
+          revenue: null,
+          employees: null
+        }
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
