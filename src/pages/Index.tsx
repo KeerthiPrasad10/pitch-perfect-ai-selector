@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { IndustrySelector } from "@/components/IndustrySelector";
 import { SearchFilter } from "@/components/SearchFilter";
@@ -28,8 +29,14 @@ const Index = () => {
     setSelectedCategory(category);
   };
 
-  const handleCustomerChange = (customer: string) => {
-    setSelectedCustomer(customer);
+  const handleIndustrySelected = (industry: string, customerName: string, aiRecommendations?: any[]) => {
+    setSelectedIndustry(industry);
+    setSelectedCustomer(customerName);
+    // If AI recommendations are provided, we could update the ML result here
+    if (aiRecommendations && aiRecommendations.length > 0) {
+      // Store the recommendations for later use
+      console.log('AI recommendations received:', aiRecommendations);
+    }
   };
 
   const handleAnalyzeClick = async () => {
@@ -67,10 +74,13 @@ const Index = () => {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* Customer Input */}
-            <CustomerInput onCustomerChange={handleCustomerChange} />
+            <CustomerInput onIndustrySelected={handleIndustrySelected} />
 
             {/* Industry Selector */}
-            <IndustrySelector onIndustryChange={handleIndustryChange} />
+            <IndustrySelector 
+              selectedIndustry={selectedIndustry}
+              onIndustryChange={handleIndustryChange} 
+            />
             
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -107,7 +117,9 @@ const Index = () => {
 
             {/* Search Filter */}
             <SearchFilter
+              searchTerm={searchTerm}
               onSearchChange={handleSearchChange}
+              selectedCategory={selectedCategory}
               onCategoryChange={handleCategoryChange}
             />
           </div>
