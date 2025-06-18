@@ -4,16 +4,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCaseData } from "@/data/useCaseData";
-import { BadgeDollarSign, Briefcase, Sparkles } from "lucide-react";
+import { BadgeDollarSign, Briefcase, Sparkles, Users, Cpu, TrendingUp } from "lucide-react";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
   searchTerm: string;
   selectedCategory: string;
   aiRecommendations?: any[];
+  rankingOption?: string;
+  showOnlyAIRecommended?: boolean;
 }
 
-export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, aiRecommendations = [] }: UseCaseGridProps) => {
+export const UseCaseGrid = ({ 
+  selectedIndustry, 
+  searchTerm, 
+  selectedCategory, 
+  aiRecommendations = [],
+  rankingOption = "relevance",
+  showOnlyAIRecommended = false
+}: UseCaseGridProps) => {
   const [selectedUseCase, setSelectedUseCase] = useState<any>(null);
 
   // Convert AI recommendations to the format expected by the grid
@@ -26,11 +35,13 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     implementation: useCase.implementation,
     timeline: useCase.timeline,
     industries: [selectedIndustry],
-    costSavings: "TBD", // AI recommendations don't include cost savings
-    isAiRecommended: true
+    costSavings: "TBD",
+    isAiRecommended: true,
+    userCount: Math.floor(Math.random() * 1000) + 100, // Mock data
+    tokensConsumed: Math.floor(Math.random() * 50000) + 5000, // Mock data
   }));
 
-  // Filter regular use cases and add isAiRecommended property
+  // Filter regular use cases and add mock data
   const filteredRegularUseCases = useCaseData.filter(useCase => {
     const matchesIndustry = !selectedIndustry || selectedIndustry === "all" || useCase.industries.includes(selectedIndustry);
     const matchesSearch = !searchTerm || 
@@ -41,20 +52,41 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     return matchesIndustry && matchesSearch && matchesCategory;
   }).map(useCase => ({
     ...useCase,
-    isAiRecommended: false
+    isAiRecommended: false,
+    userCount: Math.floor(Math.random() * 5000) + 500, // Mock data
+    tokensConsumed: Math.floor(Math.random() * 100000) + 10000, // Mock data
   }));
 
-  // Combine AI recommendations (prioritized) with filtered regular use cases
-  const allUseCases = [
+  // Determine which use cases to show
+  let allUseCases = showOnlyAIRecommended ? aiUseCases : [
     ...aiUseCases,
     ...filteredRegularUseCases.filter(regularUseCase => 
-      // Avoid duplicates by checking if AI recommendation has similar title
       !aiUseCases.some(aiUseCase => 
         aiUseCase.title.toLowerCase().includes(regularUseCase.title.toLowerCase().split(' ')[0]) ||
         regularUseCase.title.toLowerCase().includes(aiUseCase.title.toLowerCase().split(' ')[0])
       )
     )
   ];
+
+  // Apply ranking
+  const rankUseCases = (useCases: any[]) => {
+    switch (rankingOption) {
+      case "roi":
+        return [...useCases].sort((a, b) => parseInt(b.roi) - parseInt(a.roi));
+      case "complexity":
+        const complexityOrder = { "Low": 1, "Medium": 2, "High": 3 };
+        return [...useCases].sort((a, b) => complexityOrder[a.implementation] - complexityOrder[b.implementation]);
+      case "industry":
+        return [...useCases].sort((a, b) => b.industries.length - a.industries.length);
+      case "popularity":
+        return [...useCases].sort((a, b) => b.userCount - a.userCount);
+      case "relevance":
+      default:
+        return useCases; // Keep original order (AI recommendations first)
+    }
+  };
+
+  allUseCases = rankUseCases(allUseCases);
 
   const getRoiColor = (roi: string) => {
     const roiValue = parseInt(roi);
@@ -76,15 +108,10 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
-          {allUseCases.length} Recommended AI Solution{allUseCases.length !== 1 ? 's' : ''}
-          {aiRecommendations.length > 0 && (
-            <span className="ml-2 text-sm text-purple-600 font-normal">
-              ({aiRecommendations.length} AI-tailored)
-            </span>
-          )}
+          {allUseCases.length} {showOnlyAIRecommended ? 'AI Recommended' : 'Available'} Solution{allUseCases.length !== 1 ? 's' : ''}
         </h2>
         <div className="text-sm text-gray-600">
-          Ranked by relevance and ROI potential
+          Ranked by {rankingOption.replace('-', ' ')}
         </div>
       </div>
 
@@ -134,6 +161,18 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Timeline:</span>
                   <span className="font-medium text-gray-900">{useCase.timeline}</span>
+                </div>
+
+                {/* Additional metrics */}
+                <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                  <div className="flex items-center">
+                    <Users className="h-3 w-3 mr-1" />
+                    <span>{useCase.userCount} users</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Cpu className="h-3 w-3 mr-1" />
+                    <span>{(useCase.tokensConsumed / 1000).toFixed(0)}K tokens</span>
+                  </div>
                 </div>
 
                 <div className="border-t pt-3">
