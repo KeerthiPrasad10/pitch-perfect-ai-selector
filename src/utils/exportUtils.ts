@@ -6,7 +6,8 @@ export const exportToExcel = (
   selectedIndustry: string,
   aiRecommendations: any[],
   searchTerm: string,
-  selectedCategory: string
+  selectedCategory: string,
+  customerAnalysis?: any
 ) => {
   // Convert AI recommendations to the format expected
   const aiUseCases = aiRecommendations.map((useCase, index) => ({
@@ -65,6 +66,10 @@ export const exportToExcel = (
     [`IFS AI Use Case Report`],
     [`Customer: ${customerName}`],
     [`Industry: ${selectedIndustry.charAt(0).toUpperCase() + selectedIndustry.slice(1)}`],
+    [`Customer Type: ${customerAnalysis?.customerType ? customerAnalysis.customerType.charAt(0).toUpperCase() + customerAnalysis.customerType.slice(1) : 'Unknown'}`],
+    ...(customerAnalysis?.companyDetails?.customerNumber ? [[`Customer Number: ${customerAnalysis.companyDetails.customerNumber}`]] : []),
+    ...(customerAnalysis?.companyDetails?.ifsVersion ? [[`IFS Version: ${customerAnalysis.companyDetails.ifsVersion}`]] : []),
+    ...(customerAnalysis?.companyDetails?.softwareReleaseVersion ? [[`Software Release: ${customerAnalysis.companyDetails.softwareReleaseVersion}`]] : []),
     [`Generated: ${new Date().toLocaleDateString()}`],
     [`Total Recommendations: ${allUseCases.length}`],
     [],

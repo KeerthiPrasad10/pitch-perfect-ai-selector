@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -226,6 +227,7 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Customer Input Card */}
       <Card className="bg-white/90 backdrop-blur-sm shadow-xl border-purple-200 rounded-2xl">
         <CardHeader className="text-center pb-4">
           <CardTitle className="text-xl font-semibold bg-gradient-to-r from-purple-700 to-indigo-600 bg-clip-text text-transparent flex items-center justify-center space-x-2">
@@ -316,11 +318,27 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
                 
                 {analysisResult.customerType === 'customer' && (
                   <>
+                    {analysisResult.companyDetails?.customerNumber && (
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Customer Number:</span>
+                        <Badge className="bg-green-100 text-green-800">
+                          {analysisResult.companyDetails.customerNumber}
+                        </Badge>
+                      </div>
+                    )}
                     {analysisResult.companyDetails?.ifsVersion && (
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-gray-700">IFS Version:</span>
                         <Badge className="bg-green-100 text-green-800">
                           {analysisResult.companyDetails.ifsVersion}
+                        </Badge>
+                      </div>
+                    )}
+                    {analysisResult.companyDetails?.softwareReleaseVersion && (
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Software Release:</span>
+                        <Badge className="bg-green-100 text-green-800">
+                          {analysisResult.companyDetails.softwareReleaseVersion}
                         </Badge>
                       </div>
                     )}

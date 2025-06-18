@@ -1,3 +1,4 @@
+
 import type { CompanyDetails } from './types.ts';
 import { availableIndustries } from './industry-config.ts';
 
@@ -5,7 +6,8 @@ import { availableIndustries } from './industry-config.ts';
 export async function getCompanyDetails(
   companyName: string, 
   isIFSCustomer: boolean = false,
-  openAIApiKey?: string
+  openAIApiKey?: string,
+  ifsCustomerData?: any
 ): Promise<CompanyDetails> {
   if (!openAIApiKey) {
     return {
@@ -15,9 +17,11 @@ export async function getCompanyDetails(
       employees: null,
       businessModel: null,
       keyProducts: null,
-      ...(isIFSCustomer && {
-        ifsVersion: "IFS Cloud",
-        customerSince: "2020+"
+      ...(isIFSCustomer && ifsCustomerData && {
+        ifsVersion: ifsCustomerData.ifs_version || "IFS Cloud",
+        customerSince: "2020+",
+        customerNumber: ifsCustomerData.customer_number || ifsCustomerData.customer_no,
+        softwareReleaseVersion: ifsCustomerData.software_release_version || ifsCustomerData.ifs_software_release_version
       })
     };
   }
@@ -64,7 +68,7 @@ Format as JSON:
 
     if (!response.ok) {
       console.log('Failed to get company details from AI');
-      return getBasicCompanyDetails(companyName, isIFSCustomer);
+      return getBasicCompanyDetails(companyName, isIFSCustomer, ifsCustomerData);
     }
 
     const data = await response.json();
@@ -83,9 +87,11 @@ Format as JSON:
       employees: parsedInfo.employees || null,
       businessModel: parsedInfo.businessModel || null,
       keyProducts: parsedInfo.keyProducts || null,
-      ...(isIFSCustomer && {
-        ifsVersion: "IFS Cloud",
-        customerSince: "2020+"
+      ...(isIFSCustomer && ifsCustomerData && {
+        ifsVersion: ifsCustomerData.ifs_version || "IFS Cloud",
+        customerSince: "2020+",
+        customerNumber: ifsCustomerData.customer_number || ifsCustomerData.customer_no,
+        softwareReleaseVersion: ifsCustomerData.software_release_version || ifsCustomerData.ifs_software_release_version
       })
     };
 
@@ -94,7 +100,7 @@ Format as JSON:
 
   } catch (error) {
     console.log('Error getting enhanced company details:', error);
-    return getBasicCompanyDetails(companyName, isIFSCustomer);
+    return getBasicCompanyDetails(companyName, isIFSCustomer, ifsCustomerData);
   }
 }
 
@@ -179,7 +185,7 @@ Respond with ONLY the industry name in lowercase (e.g., "manufacturing", "techno
   }
 }
 
-function getBasicCompanyDetails(companyName: string, isIFSCustomer: boolean): CompanyDetails {
+function getBasicCompanyDetails(companyName: string, isIFSCustomer: boolean, ifsCustomerData?: any): CompanyDetails {
   return {
     formalName: companyName,
     description: `${companyName} is a company that could benefit from AI/ML solutions.`,
@@ -187,9 +193,11 @@ function getBasicCompanyDetails(companyName: string, isIFSCustomer: boolean): Co
     employees: null,
     businessModel: null,
     keyProducts: null,
-    ...(isIFSCustomer && {
-      ifsVersion: "IFS Cloud",
-      customerSince: "2020+"
+    ...(isIFSCustomer && ifsCustomerData && {
+      ifsVersion: ifsCustomerData.ifs_version || "IFS Cloud",
+      customerSince: "2020+",
+      customerNumber: ifsCustomerData.customer_number || ifsCustomerData.customer_no,
+      softwareReleaseVersion: ifsCustomerData.software_release_version || ifsCustomerData.ifs_software_release_version
     })
   };
 }

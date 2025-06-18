@@ -8,6 +8,8 @@ export interface CompanyDetails {
   keyProducts: string | null;
   ifsVersion?: string;
   customerSince?: string;
+  customerNumber?: string;
+  softwareReleaseVersion?: string;
 }
 
 export interface RelatedIndustry {

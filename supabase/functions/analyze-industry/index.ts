@@ -38,9 +38,10 @@ serve(async (req) => {
     if (ifsCustomer) {
       // Company is an IFS customer
       console.log(`${customerName} is an IFS customer in ${ifsCustomer.industry} industry`);
+      console.log(`Customer details - Number: ${ifsCustomer.customer_number}, IFS Version: ${ifsCustomer.ifs_version}, Software Release: ${ifsCustomer.software_release_version}`);
       
       // Get enhanced company details first
-      const companyDetails = await getCompanyDetails(ifsCustomer.customer_name, true, openAIApiKey);
+      const companyDetails = await getCompanyDetails(ifsCustomer.customer_name, true, openAIApiKey, ifsCustomer);
       
       // Get document insights to inform industry classification
       const documentInsights = await getDocumentInsights(customerName, openAIApiKey, supabase);
@@ -77,7 +78,7 @@ serve(async (req) => {
         customerType: "customer",
         industry: actualIndustry, // Use AI-determined industry
         confidence: "high",
-        reasoning: `${companyDetails.formalName} is a confirmed IFS customer. Industry classification determined by AI analysis of actual business operations.`,
+        reasoning: `${companyDetails.formalName} is a confirmed IFS customer (Customer #${companyDetails.customerNumber}) running ${companyDetails.ifsVersion} (Release ${companyDetails.softwareReleaseVersion}). Industry classification determined by AI analysis of actual business operations.`,
         currentUseCases: ifsCustomer.current_ml_usecases || [],
         documentBasedUseCases: documentUseCases,
         suggestedCompanies: [],

@@ -13,7 +13,12 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
 
     if (!exactError && exactMatch) {
       console.log(`Found exact match: ${exactMatch.customer_name}`);
-      return exactMatch;
+      return {
+        ...exactMatch,
+        customer_number: exactMatch.customer_no || exactMatch.customer_number,
+        software_release_version: exactMatch.ifs_software_release_version || exactMatch.software_release_version,
+        ifs_version: exactMatch.ifs_version
+      };
     }
 
     // Search for partial matches
@@ -25,8 +30,14 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
 
     if (!partialError && partialMatches && partialMatches.length > 0) {
       console.log(`Found ${partialMatches.length} partial matches`);
-      // Return the first match for now, could be enhanced with better matching logic
-      return partialMatches[0];
+      // Return the first match with additional fields
+      const match = partialMatches[0];
+      return {
+        ...match,
+        customer_number: match.customer_no || match.customer_number,
+        software_release_version: match.ifs_software_release_version || match.software_release_version,
+        ifs_version: match.ifs_version
+      };
     }
 
     console.log('No IFS customer match found');
@@ -42,7 +53,7 @@ export async function searchSimilarIFSCompanies(companyName: string, supabase: a
   try {
     const { data: companies, error } = await supabase
       .from('ifs_customers')
-      .select('customer_name, industry')
+      .select('customer_name, industry, customer_no, ifs_version, ifs_software_release_version')
       .ilike('customer_name', `%${companyName.split(' ')[0]}%`)
       .limit(10);
 
@@ -54,7 +65,10 @@ export async function searchSimilarIFSCompanies(companyName: string, supabase: a
     return companies?.map(company => ({
       name: company.customer_name,
       industry: company.industry,
-      isIFSCustomer: true
+      isIFSCustomer: true,
+      customerNumber: company.customer_no || company.customer_number,
+      ifsVersion: company.ifs_version,
+      softwareReleaseVersion: company.ifs_software_release_version || company.software_release_version
     })) || [];
   } catch (error) {
     console.log('Error in similar company search:', error);

@@ -17,13 +17,15 @@ const Index = () => {
   const [showResults, setShowResults] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
   const [relatedIndustries, setRelatedIndustries] = useState<any[]>([]);
+  const [customerAnalysis, setCustomerAnalysis] = useState<any>(null);
   const { toast } = useToast();
 
-  const handleIndustrySelected = (industry: string, customer: string, recommendations: any[] = [], related: any[] = []) => {
+  const handleIndustrySelected = (industry: string, customer: string, recommendations: any[] = [], related: any[] = [], analysis?: any) => {
     setSelectedIndustry(industry || "");
     setCustomerName(customer || "");
     setAiRecommendations(recommendations || []);
     setRelatedIndustries(related || []);
+    setCustomerAnalysis(analysis);
     setShowResults(true);
   };
 
@@ -34,6 +36,7 @@ const Index = () => {
     setSelectedCategory("all");
     setAiRecommendations([]);
     setRelatedIndustries([]);
+    setCustomerAnalysis(null);
     setShowResults(false);
   };
 
@@ -48,7 +51,7 @@ const Index = () => {
     }
 
     try {
-      exportToExcel(customerName, selectedIndustry, aiRecommendations, searchTerm, selectedCategory);
+      exportToExcel(customerName, selectedIndustry, aiRecommendations, searchTerm, selectedCategory, customerAnalysis);
       toast({
         title: "Report exported successfully",
         description: "The Excel file has been downloaded to your computer.",
@@ -196,6 +199,11 @@ const Index = () => {
                   <div className="flex-1">
                     <h3 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-purple-700 to-indigo-600 bg-clip-text text-transparent mb-1">
                       AI Solutions for {customerName}
+                      {customerAnalysis?.companyDetails?.customerNumber && (
+                        <span className="text-sm font-normal text-purple-600 ml-2">
+                          (Customer #{customerAnalysis.companyDetails.customerNumber})
+                        </span>
+                      )}
                     </h3>
                     <p className="text-slate-600 text-sm sm:text-base">
                       Tailored recommendations for the{" "}
@@ -211,6 +219,11 @@ const Index = () => {
                       {relatedIndustries.length > 0 && (
                         <span className="ml-2 text-indigo-600">
                           • {relatedIndustries.length} related industries analyzed
+                        </span>
+                      )}
+                      {customerAnalysis?.companyDetails?.ifsVersion && (
+                        <span className="ml-2 text-green-600">
+                          • Running {customerAnalysis.companyDetails.ifsVersion}
                         </span>
                       )}
                     </p>
