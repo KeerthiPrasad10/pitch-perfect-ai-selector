@@ -30,9 +30,10 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     ragSources: useCase?.ragSources || []
   })) : [];
 
-  // Filter regular use cases and add isAiRecommended property
+  // Filter regular use cases to only show industry-relevant ones
   const filteredRegularUseCases = useCaseData.filter(useCase => {
-    const matchesIndustry = !selectedIndustry || selectedIndustry === "all" || useCase.industries.includes(selectedIndustry);
+    // Only show use cases that explicitly include the selected industry
+    const matchesIndustry = selectedIndustry && useCase.industries.includes(selectedIndustry);
     const matchesSearch = !searchTerm || 
       useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       useCase.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -46,16 +47,10 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     ragSources: []
   }));
 
-  // Combine AI recommendations (prioritized) with filtered regular use cases
+  // Only show AI recommendations from uploaded documents, no static use cases unless industry matches
   const allUseCases = [
-    ...aiUseCases,
-    ...filteredRegularUseCases.filter(regularUseCase => 
-      // Avoid duplicates by checking if AI recommendation has similar title
-      !aiUseCases.some(aiUseCase => 
-        aiUseCase.title.toLowerCase().includes(regularUseCase.title.toLowerCase().split(' ')[0]) ||
-        regularUseCase.title.toLowerCase().includes(aiUseCase.title.toLowerCase().split(' ')[0])
-      )
-    )
+    ...aiUseCases, // These come from uploaded documents via RAG
+    ...filteredRegularUseCases // Only industry-specific static use cases
   ];
 
   const getRoiColor = (roi: string) => {
@@ -81,7 +76,7 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
           {allUseCases.length} Recommended AI Solution{allUseCases.length !== 1 ? 's' : ''}
           {aiRecommendations.length > 0 && (
             <span className="ml-2 text-sm text-purple-600 font-normal">
-              ({aiRecommendations.length} AI-tailored)
+              ({aiRecommendations.length} from uploaded documents)
             </span>
           )}
           {aiRecommendations.some(rec => rec?.ragEnhanced) && (
@@ -91,9 +86,22 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
           )}
         </h2>
         <div className="text-sm text-gray-600">
-          Ranked by relevance and ROI potential
+          Industry-specific recommendations only
         </div>
       </div>
+
+      {allUseCases.length === 0 && (
+        <div className="text-center py-12">
+          <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No relevant AI solutions found</h3>
+          <p className="text-gray-600">
+            {aiRecommendations.length === 0 
+              ? "Upload documents containing AI use cases specific to this industry to see recommendations."
+              : "Try adjusting your search terms or category filters."
+            }
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {allUseCases.map((useCase) => (
@@ -121,12 +129,12 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
               <div className="flex flex-wrap gap-2 mt-3">
                 {useCase.ragEnhanced && (
                   <Badge className="text-xs bg-blue-100 text-blue-800">
-                    Document Enhanced
+                    From Documents
                   </Badge>
                 )}
                 {useCase.isAiRecommended && !useCase.ragEnhanced && (
                   <Badge className="text-xs bg-purple-100 text-purple-800">
-                    AI Recommended
+                    From Documents
                   </Badge>
                 )}
                 <Badge variant="secondary" className="text-xs">
@@ -185,22 +193,13 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
                 </div>
 
                 <div className="text-xs text-gray-500">
-                  <strong>Best for:</strong> {useCase.industries?.slice(0, 2).join(', ')}
-                  {useCase.industries?.length > 2 && ` +${useCase.industries.length - 2} more`}
+                  <strong>Industry:</strong> {selectedIndustry}
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
-
-      {allUseCases.length === 0 && (
-        <div className="text-center py-12">
-          <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No matching solutions found</h3>
-          <p className="text-gray-600">Try adjusting your search terms or category filters.</p>
-        </div>
-      )}
     </div>
   );
 };
