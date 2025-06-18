@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Building2, TrendingUp, Sparkles, FileText, Loader2 } from "lucide-react";
+import { Search, Building2, TrendingUp, Sparkles, FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface CustomerInputProps {
   onIndustrySelected: (industry: string, customer: string, recommendations: any[]) => void;
@@ -15,7 +15,9 @@ interface CustomerInputProps {
 export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
   const [customerName, setCustomerName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [identifiedCompany, setIdentifiedCompany] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [needsSelection, setNeedsSelection] = useState(false);
   const { toast } = useToast();
 
   const searchDocuments = async (query: string) => {
@@ -69,6 +71,8 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
 
     setLoading(true);
     setSuggestions([]);
+    setIdentifiedCompany(null);
+    setNeedsSelection(false);
 
     try {
       const { data, error } = await supabase.functions.invoke('analyze-industry', {
@@ -84,12 +88,24 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
           data.industry
         );
 
-        setSuggestions(data.suggestedCompanies || []);
-        onIndustrySelected(data.industry, customerName, enhancedRecommendations);
+        if (data.analysis?.confidence === 'high') {
+          // Company successfully identified
+          setIdentifiedCompany({
+            name: customerName,
+            industry: data.industry,
+            confidence: data.analysis.confidence,
+            reasoning: data.analysis.reasoning
+          });
+          setSuggestions(data.suggestedCompanies || []);
+        } else {
+          // Company needs manual selection
+          setNeedsSelection(true);
+          setSuggestions(data.suggestedCompanies || []);
+        }
         
         toast({
           title: "Analysis Complete",
-          description: `Identified ${data.industry} industry with ${enhancedRecommendations.length} AI-enhanced recommendations.`,
+          description: `Identified ${data.industry} industry with ${enhancedRecommendations.length} recommendations.`,
         });
       } else {
         throw new Error(data?.error || 'Analysis failed');
@@ -106,10 +122,46 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
     }
   };
 
+  const proceedWithIdentifiedCompany = async () => {
+    if (!identifiedCompany) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-industry', {
+        body: { customerName: identifiedCompany.name }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        const enhancedRecommendations = await enhanceRecommendationsWithRAG(
+          data.relevantUseCases || [], 
+          identifiedCompany.name, 
+          data.industry
+        );
+
+        onIndustrySelected(data.industry, identifiedCompany.name, enhancedRecommendations);
+      }
+    } catch (error) {
+      console.error('Error proceeding with company:', error);
+      toast({
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : 'An error occurred',
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !loading) {
       analyzeCustomer();
     }
+  };
+
+  const resetSearch = () => {
+    setCustomerName("");
+    setIdentifiedCompany(null);
+    setSuggestions([]);
+    setNeedsSelection(false);
   };
 
   return (
@@ -168,7 +220,70 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
         </CardContent>
       </Card>
 
-      {suggestions.length > 0 && (
+      {/* Company Successfully Identified (Green) */}
+      {identifiedCompany && (
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 rounded-2xl shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-green-900 flex items-center space-x-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <span>✅ Company Identified: {identifiedCompany.name}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-white/80 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Industry:</span>
+                <Badge className="bg-green-100 text-green-800 capitalize">
+                  {identifiedCompany.industry}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Confidence:</span>
+                <Badge className="bg-green-100 text-green-800">
+                  {identifiedCompany.confidence}
+                </Badge>
+              </div>
+              <div className="text-sm text-gray-600">
+                <strong>AI Reasoning:</strong> {identifiedCompany.reasoning}
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <Button 
+                onClick={proceedWithIdentifiedCompany}
+                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+              >
+                Proceed with Analysis
+              </Button>
+              <Button variant="outline" onClick={resetSearch}>
+                Search Different Company
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Company Selection Needed (Amber) */}
+      {needsSelection && (
+        <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 rounded-2xl shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-amber-900 flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+              <span>Company Selection Needed</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-amber-800 mb-4">
+              We couldn't automatically identify "{customerName}". Please select from similar companies below or try a different search term.
+            </p>
+            <Button variant="outline" onClick={resetSearch} className="border-amber-300 text-amber-700 hover:bg-amber-100">
+              Try Different Search
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Similar Companies */}
+      {suggestions.length > 0 && (identifiedCompany || needsSelection) && (
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 rounded-2xl">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg text-blue-900 flex items-center space-x-2">
