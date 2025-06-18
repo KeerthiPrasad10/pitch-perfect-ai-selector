@@ -37,7 +37,8 @@ export const UseCaseGrid = ({
     ragEnhanced: useCase?.ragEnhanced || false,
     ragSources: useCase?.ragSources || [],
     sources: useCase?.sources || [],
-    industryRelevance: 'primary'
+    industryRelevance: 'primary',
+    targetCustomer: customerName // Add the correct customer name
   })) : [];
 
   // Generate use cases from related industries
@@ -57,7 +58,8 @@ export const UseCaseGrid = ({
       ragSources: [],
       sources: [],
       industryRelevance: industryInfo.relevance,
-      sourceIndustry: industryInfo.industry
+      sourceIndustry: industryInfo.industry,
+      targetCustomer: customerName // Add the correct customer name
     }))
   );
 
@@ -76,7 +78,8 @@ export const UseCaseGrid = ({
     ragEnhanced: false,
     ragSources: [],
     sources: [],
-    industryRelevance: 'primary'
+    industryRelevance: 'primary',
+    targetCustomer: customerName // Add the correct customer name
   }));
 
   // Prioritize: document-based recommendations, then related industry use cases, then static use cases
