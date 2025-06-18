@@ -1,5 +1,4 @@
-
-// Base industry use cases
+// Base industry use cases - keeping these as they're useful reference data
 export const industryUseCases = {
   manufacturing: ['Predictive Maintenance', 'Quality Control Automation', 'Supply Chain Optimization', 'Energy Consumption Optimization'],
   energy: ['Energy Demand Forecasting', 'Predictive Maintenance', 'Asset Performance Optimization', 'Grid Stability Management'],
@@ -18,66 +17,9 @@ export const industryUseCases = {
   other: ['Document Processing Automation', 'Customer Service Chatbots', 'Data Analytics', 'Process Optimization']
 };
 
-// Fallback static relationships
-export const staticRelationships = {
-  manufacturing: {
-    related: ['energy', 'automotive'],
-    useCases: industryUseCases.manufacturing
-  },
-  energy: {
-    related: ['utilities', 'manufacturing'],
-    useCases: industryUseCases.energy
-  },
-  aerospace: {
-    related: ['manufacturing', 'technology'],
-    useCases: industryUseCases.aerospace
-  },
-  construction: {
-    related: ['manufacturing', 'logistics'],
-    useCases: industryUseCases.construction
-  },
-  service: {
-    related: ['retail', 'technology'],
-    useCases: industryUseCases.service
-  },
-  telco: {
-    related: ['technology', 'service'],
-    useCases: industryUseCases.telco
-  },
-  healthcare: {
-    related: ['technology', 'service'],
-    useCases: industryUseCases.healthcare
-  },
-  finance: {
-    related: ['service', 'technology'],
-    useCases: industryUseCases.finance
-  },
-  retail: {
-    related: ['service', 'logistics'],
-    useCases: industryUseCases.retail
-  },
-  automotive: {
-    related: ['manufacturing', 'energy'],
-    useCases: industryUseCases.automotive
-  },
-  utilities: {
-    related: ['energy', 'service'],
-    useCases: industryUseCases.utilities
-  },
-  technology: {
-    related: ['service', 'telco'],
-    useCases: industryUseCases.technology
-  },
-  logistics: {
-    related: ['retail', 'manufacturing'],
-    useCases: industryUseCases.logistics
-  },
-  education: {
-    related: ['service', 'technology'],
-    useCases: industryUseCases.education
-  },
-  other: {
-    related: ['service', 'technology'],
-    useCases: industryUseCases.other
-  }
-};
+// Available industries for AI classification
+export const availableIndustries = [
+  'manufacturing', 'energy', 'aerospace', 'construction', 'service', 'telco', 
+  'healthcare', 'finance', 'retail', 'automotive', 'utilities', 'technology', 
+  'logistics', 'education', 'other'
+];

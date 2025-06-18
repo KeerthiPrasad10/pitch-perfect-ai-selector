@@ -1,53 +1,77 @@
 
-import { industryUseCases } from './industry-config.ts';
-import { staticRelationships } from './industry-config.ts';
+import { industryUseCases, availableIndustries } from './industry-config.ts';
 import type { RelatedIndustry } from './types.ts';
 
-// Enhanced function to get contextual industry relationships
+// Enhanced function to get contextual industry relationships using AI and document insights
 export async function getContextualIndustryRelationships(
   companyName: string, 
   primaryIndustry: string, 
   companyDescription?: string,
-  openAIApiKey?: string
+  openAIApiKey?: string,
+  documentInsights?: string[]
 ): Promise<RelatedIndustry[]> {
   if (!openAIApiKey) {
-    // Fallback to static relationships if no AI available
-    return getStaticIndustryRelationships(primaryIndustry);
+    // Simple fallback without static relationships
+    return [
+      {
+        industry: primaryIndustry,
+        relevance: 'primary' as const,
+        reasoning: `Core industry with highest relevance for AI implementations`,
+        useCases: industryUseCases[primaryIndustry] || industryUseCases.other,
+        description: `Core industry with highest relevance for AI implementations`
+      }
+    ];
   }
 
   try {
-    const prompt = `Analyze the company "${companyName}" and determine the most relevant related industries for AI/ML use cases.
+    // Prepare document context if available
+    const documentContext = documentInsights && documentInsights.length > 0 
+      ? `\n\nDocument insights about ${companyName}:\n${documentInsights.join('\n')}`
+      : '';
+
+    const prompt = `Analyze the company "${companyName}" and determine the most accurate primary industry classification and related industries for AI/ML use cases.
 
 Company context:
-- Primary industry: ${primaryIndustry}
-- Company description: ${companyDescription || 'No additional context'}
+- Current classification: ${primaryIndustry}
+- Company description: ${companyDescription || 'No additional context'}${documentContext}
 
-Based on this company's specific business model, identify 2 most relevant related industries that would have transferable AI/ML solutions. Consider:
-- Supply chain relationships
-- Technology dependencies
-- Customer overlap
-- Operational similarities
-- Regulatory environment similarities
+Based on this company's specific business model and actual operations, provide:
+
+1. The MOST ACCURATE primary industry classification
+2. 2-3 most relevant related industries that would have transferable AI/ML solutions
+
+Consider:
+- The company's actual business operations and revenue sources
+- Supply chain relationships and technology dependencies
+- Customer segments and operational similarities
+- Cross-industry applicability of AI solutions
+- Document insights (if provided) about the company's actual activities
+
+Available industries: ${availableIndustries.join(', ')}
 
 Return a JSON array with this structure:
 [
   {
-    "industry": "industry_name",
-    "relevance": "secondary",
-    "reasoning": "Brief explanation of why this industry is relevant",
+    "industry": "most_accurate_primary_industry",
+    "relevance": "primary",
+    "reasoning": "Why this is the most accurate primary classification based on company's main business",
     "useCases": ["UseCase1", "UseCase2", "UseCase3", "UseCase4"]
   },
   {
-    "industry": "industry_name", 
+    "industry": "related_industry_1",
+    "relevance": "secondary", 
+    "reasoning": "Specific business relationship or operational similarity",
+    "useCases": ["UseCase1", "UseCase2", "UseCase3", "UseCase4"]
+  },
+  {
+    "industry": "related_industry_2",
     "relevance": "tertiary",
-    "reasoning": "Brief explanation of why this industry is relevant",
+    "reasoning": "Technology or process transferability",
     "useCases": ["UseCase1", "UseCase2", "UseCase3", "UseCase4"]
   }
 ]
 
-Available industries: manufacturing, energy, aerospace, construction, service, telco, healthcare, finance, retail, automotive, utilities, technology, logistics, education
-
-Focus on actual business relationships rather than generic categorizations.`;
+Focus on actual business relationships and operational realities rather than generic categorizations. If the current classification seems incorrect based on the company description, suggest the more accurate primary industry.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -60,7 +84,7 @@ Focus on actual business relationships rather than generic categorizations.`;
         messages: [
           { 
             role: 'system', 
-            content: 'You are an expert business analyst specializing in industry relationships and AI/ML applications. Provide specific, logical industry relationships based on actual business connections.' 
+            content: 'You are an expert business analyst specializing in industry classification and AI/ML applications. Provide accurate industry classifications based on actual business operations, not just company names or initial assumptions.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -70,7 +94,7 @@ Focus on actual business relationships rather than generic categorizations.`;
 
     if (!response.ok) {
       console.log('Failed to get contextual industry relationships');
-      return getStaticIndustryRelationships(primaryIndustry);
+      return getMinimalFallback(primaryIndustry);
     }
 
     const data = await response.json();
@@ -83,56 +107,31 @@ Focus on actual business relationships rather than generic categorizations.`;
 
     const parsedRelatedIndustries = JSON.parse(relatedIndustries);
     
-    // Add primary industry at the beginning
-    const result = [
-      {
-        industry: primaryIndustry,
-        relevance: 'primary' as const,
-        reasoning: `Core industry with highest relevance for AI implementations`,
-        useCases: industryUseCases[primaryIndustry] || industryUseCases.other,
-        description: `Core industry with highest relevance for AI implementations`
-      },
-      ...parsedRelatedIndustries.map((item: any) => ({
-        ...item,
-        useCases: item.useCases || industryUseCases[item.industry] || industryUseCases.other,
-        description: item.reasoning
-      }))
-    ];
+    // Ensure we have proper use cases for each industry
+    const result = parsedRelatedIndustries.map((item: any) => ({
+      ...item,
+      useCases: item.useCases || industryUseCases[item.industry] || industryUseCases.other,
+      description: item.reasoning
+    }));
 
-    console.log(`Generated contextual industry relationships for ${companyName}:`, result);
+    console.log(`Generated AI-driven industry relationships for ${companyName}:`, result);
     return result;
 
   } catch (error) {
     console.log('Error generating contextual industry relationships:', error);
-    return getStaticIndustryRelationships(primaryIndustry);
+    return getMinimalFallback(primaryIndustry);
   }
 }
 
-// Fallback static relationships
-function getStaticIndustryRelationships(primaryIndustry: string): RelatedIndustry[] {
-  const industryInfo = staticRelationships[primaryIndustry] || staticRelationships.other;
-  
+// Simple fallback without static relationships
+function getMinimalFallback(primaryIndustry: string): RelatedIndustry[] {
   return [
     {
       industry: primaryIndustry,
       relevance: 'primary',
-      useCases: industryInfo.useCases,
+      useCases: industryUseCases[primaryIndustry] || industryUseCases.other,
       reasoning: `Core industry with highest relevance for AI implementations`,
       description: `Core industry with highest relevance for AI implementations`
-    },
-    {
-      industry: industryInfo.related[0] || 'service',
-      relevance: 'secondary',
-      useCases: industryUseCases[industryInfo.related[0]] || industryUseCases.service,
-      reasoning: `Highly related industry with similar operational challenges`,
-      description: `Highly related industry with similar operational challenges`
-    },
-    {
-      industry: industryInfo.related[1] || 'technology',
-      relevance: 'tertiary',
-      useCases: industryUseCases[industryInfo.related[1]] || industryUseCases.technology,
-      reasoning: `Related industry with transferable AI solutions`,
-      description: `Related industry with transferable AI solutions`
     }
   ];
 }

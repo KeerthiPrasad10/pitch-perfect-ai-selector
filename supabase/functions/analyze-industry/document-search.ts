@@ -139,3 +139,55 @@ IMPORTANT: Only extract use cases that are explicitly mentioned in the provided 
     return [];
   }
 }
+
+// Get document insights for industry relationship analysis
+export async function getDocumentInsights(
+  customerName: string,
+  openAIApiKey?: string,
+  supabase?: any
+): Promise<string[]> {
+  try {
+    if (!openAIApiKey || !supabase) {
+      return [];
+    }
+
+    // Create embedding for company-specific search
+    const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        input: `${customerName} business operations industry sector activities`,
+        model: 'text-embedding-ada-002',
+      }),
+    });
+
+    if (!embeddingResponse.ok) {
+      return [];
+    }
+
+    const embeddingData = await embeddingResponse.json();
+    const queryEmbedding = embeddingData.data[0].embedding;
+
+    // Search for company-related content
+    const { data: searchResults, error } = await supabase.rpc('search_embeddings', {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.6,
+      match_count: 3
+    });
+
+    if (error || !searchResults || searchResults.length === 0) {
+      return [];
+    }
+
+    // Extract key insights about the company's business
+    return searchResults.map(result => 
+      `${result.file_name}: ${result.chunk_text.substring(0, 200)}...`
+    );
+  } catch (error) {
+    console.log('Error getting document insights:', error);
+    return [];
+  }
+}
