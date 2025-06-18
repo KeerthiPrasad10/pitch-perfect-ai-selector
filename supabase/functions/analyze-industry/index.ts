@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -13,72 +14,191 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Industry relationships and use cases
-const industryRelationships = {
-  manufacturing: {
-    related: ['energy', 'aerospace'],
-    useCases: ['Predictive Maintenance', 'Quality Control Automation', 'Supply Chain Optimization', 'Energy Consumption Optimization']
-  },
-  energy: {
-    related: ['manufacturing', 'utilities'],
-    useCases: ['Energy Demand Forecasting', 'Predictive Maintenance', 'Asset Performance Optimization', 'Grid Stability Management']
-  },
-  aerospace: {
-    related: ['manufacturing', 'defense'],
-    useCases: ['Predictive Maintenance', 'Quality Control Automation', 'Supply Chain Risk Management', 'Flight Operations Optimization']
-  },
-  construction: {
-    related: ['manufacturing', 'engineering'],
-    useCases: ['Project Timeline Optimization', 'Supply Chain Management', 'Safety Risk Assessment', 'Equipment Maintenance']
-  },
-  service: {
-    related: ['retail', 'hospitality'],
-    useCases: ['Customer Service Chatbots', 'Document Processing Automation', 'Price Optimization', 'Customer Behavior Analytics']
-  },
-  telco: {
-    related: ['technology', 'service'],
-    useCases: ['Network Optimization', 'Customer Service Chatbots', 'Fraud Detection System', 'Predictive Network Maintenance']
-  },
-  healthcare: {
-    related: ['manufacturing', 'service'],
-    useCases: ['Medical Image Analysis', 'Drug Discovery Acceleration', 'Patient Risk Assessment', 'Treatment Optimization']
-  },
-  finance: {
-    related: ['service', 'technology'],
-    useCases: ['Fraud Detection System', 'Credit Risk Assessment', 'Algorithmic Trading', 'Customer Service Chatbots']
-  },
-  retail: {
-    related: ['service', 'logistics'],
-    useCases: ['Demand Forecasting', 'Price Optimization', 'Customer Behavior Analytics', 'Inventory Management']
-  },
-  automotive: {
-    related: ['manufacturing', 'energy'],
-    useCases: ['Predictive Maintenance', 'Quality Control Automation', 'Autonomous Vehicle Systems', 'Supply Chain Optimization']
-  },
-  utilities: {
-    related: ['energy', 'service'],
-    useCases: ['Smart Grid Management', 'Energy Consumption Optimization', 'Predictive Maintenance', 'Customer Service Automation']
-  },
-  technology: {
-    related: ['service', 'telco'],
-    useCases: ['Automated Code Generation', 'System Performance Optimization', 'Customer Service Chatbots', 'Cybersecurity Threat Detection']
-  },
-  logistics: {
-    related: ['retail', 'manufacturing'],
-    useCases: ['Route Optimization', 'Demand Forecasting', 'Warehouse Automation', 'Supply Chain Optimization']
-  },
-  education: {
-    related: ['service', 'technology'],
-    useCases: ['Personalized Learning Systems', 'Student Performance Analytics', 'Administrative Automation', 'Content Recommendation']
-  },
-  other: {
-    related: ['service', 'technology'],
-    useCases: ['Document Processing Automation', 'Customer Service Chatbots', 'Data Analytics', 'Process Optimization']
-  }
+// Base industry use cases
+const industryUseCases = {
+  manufacturing: ['Predictive Maintenance', 'Quality Control Automation', 'Supply Chain Optimization', 'Energy Consumption Optimization'],
+  energy: ['Energy Demand Forecasting', 'Predictive Maintenance', 'Asset Performance Optimization', 'Grid Stability Management'],
+  aerospace: ['Predictive Maintenance', 'Quality Control Automation', 'Supply Chain Risk Management', 'Flight Operations Optimization'],
+  construction: ['Project Timeline Optimization', 'Supply Chain Management', 'Safety Risk Assessment', 'Equipment Maintenance'],
+  service: ['Customer Service Chatbots', 'Document Processing Automation', 'Price Optimization', 'Customer Behavior Analytics'],
+  telco: ['Network Optimization', 'Customer Service Chatbots', 'Fraud Detection System', 'Predictive Network Maintenance'],
+  healthcare: ['Medical Image Analysis', 'Drug Discovery Acceleration', 'Patient Risk Assessment', 'Treatment Optimization'],
+  finance: ['Fraud Detection System', 'Credit Risk Assessment', 'Algorithmic Trading', 'Customer Service Chatbots'],
+  retail: ['Demand Forecasting', 'Price Optimization', 'Customer Behavior Analytics', 'Inventory Management'],
+  automotive: ['Predictive Maintenance', 'Quality Control Automation', 'Autonomous Vehicle Systems', 'Supply Chain Optimization'],
+  utilities: ['Smart Grid Management', 'Energy Consumption Optimization', 'Predictive Maintenance', 'Customer Service Automation'],
+  technology: ['Automated Code Generation', 'System Performance Optimization', 'Customer Service Chatbots', 'Cybersecurity Threat Detection'],
+  logistics: ['Route Optimization', 'Demand Forecasting', 'Warehouse Automation', 'Supply Chain Optimization'],
+  education: ['Personalized Learning Systems', 'Student Performance Analytics', 'Administrative Automation', 'Content Recommendation'],
+  other: ['Document Processing Automation', 'Customer Service Chatbots', 'Data Analytics', 'Process Optimization']
 };
 
-function getRelatedIndustries(primaryIndustry: string) {
-  const industryInfo = industryRelationships[primaryIndustry] || industryRelationships.other;
+// Enhanced function to get contextual industry relationships
+async function getContextualIndustryRelationships(companyName: string, primaryIndustry: string, companyDescription?: string) {
+  if (!openAIApiKey) {
+    // Fallback to static relationships if no AI available
+    return getStaticIndustryRelationships(primaryIndustry);
+  }
+
+  try {
+    const prompt = `Analyze the company "${companyName}" and determine the most relevant related industries for AI/ML use cases.
+
+Company context:
+- Primary industry: ${primaryIndustry}
+- Company description: ${companyDescription || 'No additional context'}
+
+Based on this company's specific business model, identify 2 most relevant related industries that would have transferable AI/ML solutions. Consider:
+- Supply chain relationships
+- Technology dependencies
+- Customer overlap
+- Operational similarities
+- Regulatory environment similarities
+
+Return a JSON array with this structure:
+[
+  {
+    "industry": "industry_name",
+    "relevance": "secondary",
+    "reasoning": "Brief explanation of why this industry is relevant",
+    "useCases": ["UseCase1", "UseCase2", "UseCase3", "UseCase4"]
+  },
+  {
+    "industry": "industry_name", 
+    "relevance": "tertiary",
+    "reasoning": "Brief explanation of why this industry is relevant",
+    "useCases": ["UseCase1", "UseCase2", "UseCase3", "UseCase4"]
+  }
+]
+
+Available industries: manufacturing, energy, aerospace, construction, service, telco, healthcare, finance, retail, automotive, utilities, technology, logistics, education
+
+Focus on actual business relationships rather than generic categorizations.`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are an expert business analyst specializing in industry relationships and AI/ML applications. Provide specific, logical industry relationships based on actual business connections.' 
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.2,
+      }),
+    });
+
+    if (!response.ok) {
+      console.log('Failed to get contextual industry relationships');
+      return getStaticIndustryRelationships(primaryIndustry);
+    }
+
+    const data = await response.json();
+    let relatedIndustries = data.choices[0].message.content;
+
+    // Clean up response if it has markdown formatting
+    if (relatedIndustries.includes('```json')) {
+      relatedIndustries = relatedIndustries.replace(/```json\n?/, '').replace(/\n?```/, '');
+    }
+
+    const parsedRelatedIndustries = JSON.parse(relatedIndustries);
+    
+    // Add primary industry at the beginning
+    const result = [
+      {
+        industry: primaryIndustry,
+        relevance: 'primary',
+        reasoning: `Core industry with highest relevance for AI implementations`,
+        useCases: industryUseCases[primaryIndustry] || industryUseCases.other,
+        description: `Core industry with highest relevance for AI implementations`
+      },
+      ...parsedRelatedIndustries.map((item: any) => ({
+        ...item,
+        useCases: item.useCases || industryUseCases[item.industry] || industryUseCases.other,
+        description: item.reasoning
+      }))
+    ];
+
+    console.log(`Generated contextual industry relationships for ${companyName}:`, result);
+    return result;
+
+  } catch (error) {
+    console.log('Error generating contextual industry relationships:', error);
+    return getStaticIndustryRelationships(primaryIndustry);
+  }
+}
+
+// Fallback static relationships
+function getStaticIndustryRelationships(primaryIndustry: string) {
+  const staticRelationships = {
+    manufacturing: {
+      related: ['energy', 'automotive'],
+      useCases: industryUseCases.manufacturing
+    },
+    energy: {
+      related: ['utilities', 'manufacturing'],
+      useCases: industryUseCases.energy
+    },
+    aerospace: {
+      related: ['manufacturing', 'technology'],
+      useCases: industryUseCases.aerospace
+    },
+    construction: {
+      related: ['manufacturing', 'logistics'],
+      useCases: industryUseCases.construction
+    },
+    service: {
+      related: ['retail', 'technology'],
+      useCases: industryUseCases.service
+    },
+    telco: {
+      related: ['technology', 'service'],
+      useCases: industryUseCases.telco
+    },
+    healthcare: {
+      related: ['technology', 'service'],
+      useCases: industryUseCases.healthcare
+    },
+    finance: {
+      related: ['service', 'technology'],
+      useCases: industryUseCases.finance
+    },
+    retail: {
+      related: ['service', 'logistics'],
+      useCases: industryUseCases.retail
+    },
+    automotive: {
+      related: ['manufacturing', 'energy'],
+      useCases: industryUseCases.automotive
+    },
+    utilities: {
+      related: ['energy', 'service'],
+      useCases: industryUseCases.utilities
+    },
+    technology: {
+      related: ['service', 'telco'],
+      useCases: industryUseCases.technology
+    },
+    logistics: {
+      related: ['retail', 'manufacturing'],
+      useCases: industryUseCases.logistics
+    },
+    education: {
+      related: ['service', 'technology'],
+      useCases: industryUseCases.education
+    },
+    other: {
+      related: ['service', 'technology'],
+      useCases: industryUseCases.other
+    }
+  };
+
+  const industryInfo = staticRelationships[primaryIndustry] || staticRelationships.other;
   
   return [
     {
@@ -90,17 +210,13 @@ function getRelatedIndustries(primaryIndustry: string) {
     {
       industry: industryInfo.related[0] || 'service',
       relevance: 'secondary',
-      useCases: industryRelationships[industryInfo.related[0]] ? 
-        industryRelationships[industryInfo.related[0]].useCases : 
-        industryRelationships.service.useCases,
+      useCases: industryUseCases[industryInfo.related[0]] || industryUseCases.service,
       description: `Highly related industry with similar operational challenges`
     },
     {
       industry: industryInfo.related[1] || 'technology',
       relevance: 'tertiary',
-      useCases: industryRelationships[industryInfo.related[1]] ? 
-        industryRelationships[industryInfo.related[1]].useCases : 
-        industryRelationships.technology.useCases,
+      useCases: industryUseCases[industryInfo.related[1]] || industryUseCases.technology,
       description: `Related industry with transferable AI solutions`
     }
   ];
@@ -241,7 +357,9 @@ async function getCompanyDetails(companyName: string, isIFSCustomer: boolean = f
       formalName: companyName,
       description: `Analysis for ${companyName}`,
       revenue: null,
-      employees: null
+      employees: null,
+      businessModel: null,
+      keyProducts: null
     };
   }
 
@@ -251,7 +369,9 @@ async function getCompanyDetails(companyName: string, isIFSCustomer: boolean = f
       "formalName": "Official legal company name",
       "description": "Brief description of their business, what they do, main products/services",
       "revenue": "Annual revenue if known (e.g., '$5B', '$500M')",
-      "employees": "Number of employees if known (e.g., '10,000+', '500-1000')"
+      "employees": "Number of employees if known (e.g., '10,000+', '500-1000')",
+      "businessModel": "Brief description of their business model and key differentiators",
+      "keyProducts": "Main products or services they offer"
     }
     
     Be factual and concise. If information is not available, use null for that field.`;
@@ -302,7 +422,9 @@ async function getCompanyDetails(companyName: string, isIFSCustomer: boolean = f
       formalName: companyName,
       description: `${companyName} is a company in the specified industry`,
       revenue: null,
-      employees: null
+      employees: null,
+      businessModel: null,
+      keyProducts: null
     };
   }
 }
@@ -395,8 +517,12 @@ serve(async (req) => {
       // Get relevant use cases from uploaded documents
       documentUseCases = await searchDocumentUseCases(customerName, ifsCustomer.industry, ifsCustomer.industry);
       
-      // Get related industries and their use cases
-      const relatedIndustries = getRelatedIndustries(ifsCustomer.industry);
+      // Get contextual related industries and their use cases
+      const relatedIndustries = await getContextualIndustryRelationships(
+        ifsCustomer.customer_name, 
+        ifsCustomer.industry, 
+        companyDetails.description
+      );
       
       analysis = {
         customerType: "customer",
@@ -454,8 +580,12 @@ serve(async (req) => {
       // Get document-based use cases for the prospect
       documentUseCases = await searchDocumentUseCases(customerName, prospectIndustry, prospectIndustry);
       
-      // Get related industries and their use cases
-      const relatedIndustries = getRelatedIndustries(prospectIndustry);
+      // Get contextual related industries and their use cases
+      const relatedIndustries = await getContextualIndustryRelationships(
+        customerName, 
+        prospectIndustry, 
+        companyDetails.description
+      );
       
       analysis = {
         customerType: "prospect",
