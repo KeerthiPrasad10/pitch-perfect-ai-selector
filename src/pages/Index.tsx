@@ -19,9 +19,9 @@ const Index = () => {
   const { toast } = useToast();
 
   const handleIndustrySelected = (industry: string, customer: string, recommendations: any[] = []) => {
-    setSelectedIndustry(industry);
-    setCustomerName(customer);
-    setAiRecommendations(recommendations);
+    setSelectedIndustry(industry || "");
+    setCustomerName(customer || "");
+    setAiRecommendations(recommendations || []);
     setShowResults(true);
   };
 
@@ -57,6 +57,11 @@ const Index = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const formatIndustryName = (industry: string) => {
+    if (!industry || typeof industry !== 'string') return '';
+    return industry.charAt(0).toUpperCase() + industry.slice(1);
   };
 
   return (
@@ -192,7 +197,7 @@ const Index = () => {
                     <p className="text-slate-600 text-sm sm:text-base">
                       Tailored recommendations for the{" "}
                       <span className="font-medium bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                        {selectedIndustry.charAt(0).toUpperCase() + selectedIndustry.slice(1)}
+                        {formatIndustryName(selectedIndustry)}
                       </span>{" "}
                       industry
                       {aiRecommendations.length > 0 && (
