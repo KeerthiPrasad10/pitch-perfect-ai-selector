@@ -5,7 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 import { getContextualIndustryRelationships } from './industry-relationships.ts';
 import { searchDocumentUseCases, getDocumentInsights } from './document-search.ts';
-import { getCompanyDetails } from './company-analysis.ts';
+import { getCompanyDetails, classifyCompanyIndustry } from './company-analysis.ts';
 import { checkIFSCustomer, searchSimilarIFSCompanies } from './ifs-customer-lookup.ts';
 import type { CustomerAnalysis } from './types.ts';
 
@@ -39,35 +39,45 @@ serve(async (req) => {
       // Company is an IFS customer
       console.log(`${customerName} is an IFS customer in ${ifsCustomer.industry} industry`);
       
-      // Get enhanced company details
+      // Get enhanced company details first
       const companyDetails = await getCompanyDetails(ifsCustomer.customer_name, true, openAIApiKey);
       
-      // Get document insights to inform industry relationships
+      // Get document insights to inform industry classification
       const documentInsights = await getDocumentInsights(customerName, openAIApiKey, supabase);
       
-      // Get relevant use cases from uploaded documents
-      documentUseCases = await searchDocumentUseCases(
-        customerName, 
-        ifsCustomer.industry, 
-        ifsCustomer.industry,
-        openAIApiKey,
-        supabase
+      // Use AI to determine the ACTUAL industry based on company operations
+      const actualIndustry = await classifyCompanyIndustry(
+        ifsCustomer.customer_name,
+        companyDetails.description,
+        documentInsights,
+        openAIApiKey
       );
       
-      // Get AI-driven contextual related industries using document insights
+      console.log(`AI-determined actual industry: ${actualIndustry} (original: ${ifsCustomer.industry})`);
+      
+      // Get AI-driven contextual related industries using the actual industry
       const relatedIndustries = await getContextualIndustryRelationships(
         ifsCustomer.customer_name, 
-        ifsCustomer.industry, 
+        actualIndustry, 
         companyDetails.description,
         openAIApiKey,
         documentInsights
       );
       
+      // Get relevant use cases from uploaded documents using the actual industry
+      documentUseCases = await searchDocumentUseCases(
+        customerName, 
+        actualIndustry, 
+        actualIndustry,
+        openAIApiKey,
+        supabase
+      );
+      
       analysis = {
         customerType: "customer",
-        industry: relatedIndustries[0]?.industry || ifsCustomer.industry, // Use AI-corrected industry if available
+        industry: actualIndustry, // Use AI-determined industry
         confidence: "high",
-        reasoning: `${companyDetails.formalName} is a confirmed IFS customer. Industry classification has been refined using AI analysis.`,
+        reasoning: `${companyDetails.formalName} is a confirmed IFS customer. Industry classification determined by AI analysis of actual business operations.`,
         currentUseCases: ifsCustomer.current_ml_usecases || [],
         documentBasedUseCases: documentUseCases,
         suggestedCompanies: [],
@@ -76,7 +86,7 @@ serve(async (req) => {
       };
     } else {
       // Company is a prospect
-      console.log(`${customerName} is a prospect - analyzing with AI and document insights`);
+      console.log(`${customerName} is a prospect - analyzing with AI`);
       
       // Get enhanced company details first
       const companyDetails = await getCompanyDetails(customerName, false, openAIApiKey);
@@ -84,51 +94,19 @@ serve(async (req) => {
       // Get document insights to inform industry classification
       const documentInsights = await getDocumentInsights(customerName, openAIApiKey, supabase);
       
-      // Use AI to determine the most accurate industry based on company details and documents
-      let prospectIndustry = "other";
-      if (openAIApiKey) {
-        try {
-          const industryClassificationPrompt = `Based on the following information, determine the most accurate primary industry classification for "${customerName}":
-
-Company details: ${companyDetails.description}
-${documentInsights.length > 0 ? `\nDocument insights:\n${documentInsights.join('\n')}` : ''}
-
-Available industries: manufacturing, energy, aerospace, construction, service, telco, healthcare, finance, retail, automotive, utilities, technology, logistics, education, other
-
-Consider the company's actual business operations, revenue sources, and primary activities. Respond with only the industry name in lowercase.`;
-
-          const industryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${openAIApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                { 
-                  role: 'system', 
-                  content: 'You are an expert in industry classification. Analyze the provided information carefully and determine the most accurate primary industry based on actual business operations.' 
-                },
-                { role: 'user', content: industryClassificationPrompt }
-              ],
-              temperature: 0.1,
-            }),
-          });
-
-          if (industryResponse.ok) {
-            const industryData = await industryResponse.json();
-            prospectIndustry = industryData.choices[0].message.content.trim().toLowerCase();
-            console.log(`AI-determined prospect industry: ${prospectIndustry}`);
-          }
-        } catch (error) {
-          console.log('Could not determine prospect industry with AI:', error);
-        }
-      }
+      // Use AI to determine the industry based on company's actual business
+      const prospectIndustry = await classifyCompanyIndustry(
+        customerName,
+        companyDetails.description,
+        documentInsights,
+        openAIApiKey
+      );
+      
+      console.log(`AI-determined prospect industry: ${prospectIndustry}`);
 
       const similarCompanies = await searchSimilarIFSCompanies(customerName, supabase);
 
-      // Get document-based use cases for the prospect
+      // Get document-based use cases for the prospect using AI-determined industry
       documentUseCases = await searchDocumentUseCases(
         customerName, 
         prospectIndustry, 
@@ -137,7 +115,7 @@ Consider the company's actual business operations, revenue sources, and primary 
         supabase
       );
       
-      // Get AI-driven contextual related industries using document insights
+      // Get AI-driven contextual related industries using the AI-determined industry
       const relatedIndustries = await getContextualIndustryRelationships(
         customerName, 
         prospectIndustry, 
@@ -148,9 +126,9 @@ Consider the company's actual business operations, revenue sources, and primary 
       
       analysis = {
         customerType: "prospect",
-        industry: relatedIndustries[0]?.industry || prospectIndustry, // Use AI-refined industry
+        industry: prospectIndustry,
         confidence: "medium",
-        reasoning: `${companyDetails.formalName} has been analyzed using AI and document insights for accurate industry classification.`,
+        reasoning: `${companyDetails.formalName} industry classification determined by AI analysis of business operations and document insights.`,
         currentUseCases: [],
         documentBasedUseCases: documentUseCases,
         suggestedCompanies: similarCompanies,
