@@ -54,6 +54,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ifs_customers: {
+        Row: {
+          created_at: string
+          current_ml_usecases: string[] | null
+          customer_name: string
+          id: string
+          industry: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_ml_usecases?: string[] | null
+          customer_name: string
+          id?: string
+          industry: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_ml_usecases?: string[] | null
+          customer_name?: string
+          id?: string
+          industry?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
