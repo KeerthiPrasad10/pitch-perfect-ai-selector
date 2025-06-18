@@ -7,7 +7,6 @@ import { CustomerInput } from "@/components/CustomerInput";
 import { useToast } from "@/hooks/use-toast";
 import { useMLAnalysis } from "@/hooks/useMLAnalysis";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Brain, Building2, Loader2, CheckCircle, Zap, Target, TrendingUp } from "lucide-react";
 
 const Index = () => {
@@ -125,52 +124,31 @@ const Index = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
-            <Tabs defaultValue="all" className="w-full">
-              <div className="flex items-center justify-between mb-6">
-                <TabsList className="grid w-fit grid-cols-2">
-                  <TabsTrigger value="all">All Use Cases</TabsTrigger>
-                  <TabsTrigger value="ai-recommended" disabled={!mlResult?.useCases?.length}>
-                    AI Recommended {mlResult?.useCases?.length ? `(${mlResult.useCases.length})` : ''}
-                  </TabsTrigger>
-                </TabsList>
-                
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">Rank by:</span>
-                  <select 
-                    value={rankingOption} 
-                    onChange={(e) => setRankingOption(e.target.value)}
-                    className="text-sm border border-gray-300 rounded px-2 py-1"
-                  >
-                    <option value="relevance">Relevance</option>
-                    <option value="roi">ROI Potential</option>
-                    <option value="complexity">Implementation Complexity</option>
-                    <option value="industry">Industry Coverage</option>
-                    <option value="popularity">User Adoption</option>
-                  </select>
-                </div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Available Solutions</h2>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Rank by:</span>
+                <select 
+                  value={rankingOption} 
+                  onChange={(e) => setRankingOption(e.target.value)}
+                  className="text-sm border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value="relevance">Relevance</option>
+                  <option value="roi">ROI Potential</option>
+                  <option value="complexity">Implementation Complexity</option>
+                  <option value="industry">Industry Coverage</option>
+                  <option value="popularity">User Adoption</option>
+                </select>
               </div>
+            </div>
 
-              <TabsContent value="all">
-                <UseCaseGrid 
-                  selectedIndustry={selectedIndustry}
-                  searchTerm={searchTerm}
-                  selectedCategory={selectedCategory}
-                  aiRecommendations={[]}
-                  rankingOption={rankingOption}
-                />
-              </TabsContent>
-
-              <TabsContent value="ai-recommended">
-                <UseCaseGrid 
-                  selectedIndustry={selectedIndustry}
-                  searchTerm={searchTerm}
-                  selectedCategory={selectedCategory}
-                  aiRecommendations={mlResult?.useCases || []}
-                  rankingOption={rankingOption}
-                  showOnlyAIRecommended={true}
-                />
-              </TabsContent>
-            </Tabs>
+            <UseCaseGrid 
+              selectedIndustry={selectedIndustry}
+              searchTerm={searchTerm}
+              selectedCategory={selectedCategory}
+              aiRecommendations={mlResult?.useCases || []}
+              rankingOption={rankingOption}
+            />
             
             {mlResult?.customerReferences && mlResult.customerReferences.length > 0 && (
               <div className="mt-8 bg-white rounded-lg shadow-md p-6">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +11,6 @@ interface UseCaseGridProps {
   selectedCategory: string;
   aiRecommendations?: any[];
   rankingOption?: string;
-  showOnlyAIRecommended?: boolean;
 }
 
 export const UseCaseGrid = ({ 
@@ -20,8 +18,7 @@ export const UseCaseGrid = ({
   searchTerm, 
   selectedCategory, 
   aiRecommendations = [],
-  rankingOption = "relevance",
-  showOnlyAIRecommended = false
+  rankingOption = "relevance"
 }: UseCaseGridProps) => {
   const [selectedUseCase, setSelectedUseCase] = useState<any>(null);
 
@@ -57,8 +54,8 @@ export const UseCaseGrid = ({
     tokensConsumed: Math.floor(Math.random() * 100000) + 10000, // Mock data
   }));
 
-  // Determine which use cases to show
-  let allUseCases = showOnlyAIRecommended ? aiUseCases : [
+  // Combine AI recommendations with regular use cases (AI first)
+  let allUseCases = [
     ...aiUseCases,
     ...filteredRegularUseCases.filter(regularUseCase => 
       !aiUseCases.some(aiUseCase => 
@@ -108,7 +105,7 @@ export const UseCaseGrid = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
-          {allUseCases.length} {showOnlyAIRecommended ? 'AI Recommended' : 'Available'} Solution{allUseCases.length !== 1 ? 's' : ''}
+          {allUseCases.length} Available Solution{allUseCases.length !== 1 ? 's' : ''}
         </h2>
         <div className="text-sm text-gray-600">
           Ranked by {rankingOption.replace('-', ' ')}
