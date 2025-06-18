@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Building2, TrendingUp, Sparkles, FileText, Loader2, CheckCircle2, AlertCircle, Users, UserCheck } from "lucide-react";
+import { Search, Building2, TrendingUp, Sparkles, FileText, Loader2, CheckCircle2, AlertCircle, Users, UserCheck, Target, Briefcase } from "lucide-react";
 
 interface CustomerInputProps {
-  onIndustrySelected: (industry: string, customer: string, recommendations: any[]) => void;
+  onIndustrySelected: (industry: string, customer: string, recommendations: any[], relatedIndustries?: any[]) => void;
 }
 
 export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
@@ -19,7 +18,7 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const { toast } = useToast();
 
-  const searchDocuments = async (query: string) => {
+  async function searchDocuments(query: string) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
@@ -40,9 +39,9 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
       console.log('RAG search not available or error occurred:', error);
       return null;
     }
-  };
+  }
 
-  const enhanceRecommendationsWithRAG = async (recommendations: any[], customerName: string, industry: string) => {
+  async function enhanceRecommendationsWithRAG(recommendations: any[], customerName: string, industry: string) {
     try {
       const ragData = await searchDocuments(`${customerName} ${industry} AI solutions recommendations`);
       
@@ -62,9 +61,9 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
       console.log('Error enhancing recommendations with RAG:', error);
       return recommendations;
     }
-  };
+  }
 
-  const searchSimilarCompanies = async (companyName: string) => {
+  async function searchSimilarCompanies(companyName: string) {
     try {
       const { data, error } = await supabase.functions.invoke('search-companies', {
         body: { companyName: companyName.trim() }
@@ -80,7 +79,7 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
       console.log('Error searching companies:', error);
       return [];
     }
-  };
+  }
 
   const analyzeCustomer = async () => {
     if (!customerName.trim()) return;
@@ -140,7 +139,12 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
         analysisResult.industry
       );
 
-      onIndustrySelected(analysisResult.industry, customerName, enhancedRecommendations);
+      onIndustrySelected(
+        analysisResult.industry, 
+        customerName, 
+        enhancedRecommendations,
+        analysisResult.relatedIndustries || []
+      );
     } catch (error) {
       console.error('Error proceeding with analysis:', error);
       toast({
@@ -171,7 +175,12 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
           analysis.industry
         );
 
-        onIndustrySelected(analysis.industry, companyName, enhancedRecommendations);
+        onIndustrySelected(
+          analysis.industry, 
+          companyName, 
+          enhancedRecommendations,
+          analysis.relatedIndustries || []
+        );
       }
     } catch (error) {
       console.error('Error analyzing selected company:', error);
@@ -195,6 +204,24 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
     setCustomerName("");
     setAnalysisResult(null);
     setSuggestions([]);
+  };
+
+  const getRelevanceBadgeColor = (relevance: string) => {
+    switch (relevance) {
+      case 'primary': return 'bg-purple-100 text-purple-800';
+      case 'secondary': return 'bg-blue-100 text-blue-800';
+      case 'tertiary': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getRelevanceIcon = (relevance: string) => {
+    switch (relevance) {
+      case 'primary': return <Target className="h-3 w-3" />;
+      case 'secondary': return <TrendingUp className="h-3 w-3" />;
+      case 'tertiary': return <Briefcase className="h-3 w-3" />;
+      default: return <Building2 className="h-3 w-3" />;
+    }
   };
 
   return (
@@ -255,91 +282,153 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
 
       {/* Customer Analysis Results */}
       {analysisResult && (
-        <Card className={`rounded-2xl shadow-lg ${
-          analysisResult.customerType === 'customer' 
-            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
-            : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
-        }`}>
-          <CardHeader className="pb-3">
-            <CardTitle className={`text-lg flex items-center space-x-2 ${
-              analysisResult.customerType === 'customer' ? 'text-green-900' : 'text-blue-900'
-            }`}>
-              {analysisResult.customerType === 'customer' ? (
-                <>
-                  <UserCheck className="h-5 w-5 text-green-600" />
-                  <span>✅ IFS Customer: {customerName}</span>
-                </>
-              ) : (
-                <>
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <span>🎯 Prospect: {customerName}</span>
-                </>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-white/80 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Industry:</span>
-                <Badge className={analysisResult.customerType === 'customer' ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
-                  {analysisResult.industry}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Status:</span>
-                <Badge className={analysisResult.customerType === 'customer' ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
-                  {analysisResult.customerType === 'customer' ? 'IFS Customer' : 'Prospect'}
-                </Badge>
-              </div>
-              
-              {analysisResult.customerType === 'customer' && analysisResult.currentUseCases && analysisResult.currentUseCases.length > 0 && (
-                <div className="mb-2">
-                  <span className="text-sm font-medium text-gray-700">Current ML Use Cases:</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {analysisResult.currentUseCases.map((useCase: string, index: number) => (
-                      <Badge key={index} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                        {useCase}
-                      </Badge>
-                    ))}
-                  </div>
+        <>
+          <Card className={`rounded-2xl shadow-lg ${
+            analysisResult.customerType === 'customer' 
+              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
+              : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
+          }`}>
+            <CardHeader className="pb-3">
+              <CardTitle className={`text-lg flex items-center space-x-2 ${
+                analysisResult.customerType === 'customer' ? 'text-green-900' : 'text-blue-900'
+              }`}>
+                {analysisResult.customerType === 'customer' ? (
+                  <>
+                    <UserCheck className="h-5 w-5 text-green-600" />
+                    <span>✅ IFS Customer: {customerName}</span>
+                  </>
+                ) : (
+                  <>
+                    <Users className="h-5 w-5 text-blue-600" />
+                    <span>🎯 Prospect: {customerName}</span>
+                  </>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-white/80 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Industry:</span>
+                  <Badge className={analysisResult.customerType === 'customer' ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
+                    {analysisResult.industry}
+                  </Badge>
                 </div>
-              )}
-              
-              <div className="text-sm text-gray-600">
-                <strong>Analysis:</strong> {analysisResult.reasoning}
-              </div>
-              
-              {analysisResult.documentBasedUseCases && analysisResult.documentBasedUseCases.length > 0 && (
-                <div className="mt-3 p-3 bg-gray-50 rounded">
-                  <div className="text-sm font-medium text-gray-700 mb-2">
-                    📄 Found {analysisResult.documentBasedUseCases.length} relevant use case(s) in uploaded documents
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {analysisResult.customerType === 'customer' 
-                      ? 'Additional opportunities beyond current implementations'
-                      : 'Recommended AI solutions for this prospect'
-                    }
-                  </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Status:</span>
+                  <Badge className={analysisResult.customerType === 'customer' ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
+                    {analysisResult.customerType === 'customer' ? 'IFS Customer' : 'Prospect'}
+                  </Badge>
                 </div>
-              )}
-            </div>
-            <div className="flex space-x-3">
-              <Button 
-                onClick={proceedWithAnalysis}
-                className={`flex-1 ${
-                  analysisResult.customerType === 'customer'
-                    ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
-                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
-                } text-white`}
-              >
-                {analysisResult.customerType === 'customer' ? 'View Customer Opportunities' : 'View Prospect Recommendations'}
-              </Button>
-              <Button variant="outline" onClick={resetSearch}>
-                Search Different Company
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                
+                {analysisResult.customerType === 'customer' && analysisResult.currentUseCases && analysisResult.currentUseCases.length > 0 && (
+                  <div className="mb-2">
+                    <span className="text-sm font-medium text-gray-700">Current ML Use Cases:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {analysisResult.currentUseCases.map((useCase: string, index: number) => (
+                        <Badge key={index} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                          {useCase}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="text-sm text-gray-600">
+                  <strong>Analysis:</strong> {analysisResult.reasoning}
+                </div>
+                
+                {analysisResult.documentBasedUseCases && analysisResult.documentBasedUseCases.length > 0 && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded">
+                    <div className="text-sm font-medium text-gray-700 mb-2">
+                      📄 Found {analysisResult.documentBasedUseCases.length} relevant use case(s) in uploaded documents
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {analysisResult.customerType === 'customer' 
+                        ? 'Additional opportunities beyond current implementations'
+                        : 'Recommended AI solutions for this prospect'
+                      }
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex space-x-3">
+                <Button 
+                  onClick={proceedWithAnalysis}
+                  className={`flex-1 ${
+                    analysisResult.customerType === 'customer'
+                      ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+                      : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                  } text-white`}
+                >
+                  {analysisResult.customerType === 'customer' ? 'View Customer Opportunities' : 'View Prospect Recommendations'}
+                </Button>
+                <Button variant="outline" onClick={resetSearch}>
+                  Search Different Company
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Related Industries */}
+          {analysisResult.relatedIndustries && analysisResult.relatedIndustries.length > 0 && (
+            <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 rounded-2xl">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg text-purple-900 flex items-center space-x-2">
+                  <Target className="h-5 w-5" />
+                  <span>Industry Analysis & ML Opportunities</span>
+                </CardTitle>
+                <p className="text-sm text-purple-700">
+                  Core industry and related opportunities ranked by relevance
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {analysisResult.relatedIndustries.map((industryInfo: any, index: number) => (
+                    <div key={index} className="bg-white/80 rounded-lg p-4 border border-purple-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Badge className={`text-xs ${getRelevanceBadgeColor(industryInfo.relevance)} flex items-center space-x-1`}>
+                            {getRelevanceIcon(industryInfo.relevance)}
+                            <span>{industryInfo.relevance === 'primary' ? 'Core Industry' : 
+                                   industryInfo.relevance === 'secondary' ? 'Related Industry' : 
+                                   'Additional Opportunity'}</span>
+                          </Badge>
+                          <h4 className="font-semibold text-gray-900 capitalize">
+                            {industryInfo.industry}
+                          </h4>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-3">
+                        {industryInfo.description}
+                      </p>
+                      
+                      <div className="mb-2">
+                        <span className="text-sm font-medium text-gray-700">Key ML Use Cases:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {industryInfo.useCases.slice(0, 4).map((useCase: string, ucIndex: number) => (
+                          <Badge 
+                            key={ucIndex} 
+                            variant="outline" 
+                            className="text-xs bg-gray-50 text-gray-700 border-gray-200"
+                          >
+                            {useCase}
+                          </Badge>
+                        ))}
+                        {industryInfo.useCases.length > 4 && (
+                          <Badge variant="outline" className="text-xs bg-gray-50 text-gray-500">
+                            +{industryInfo.useCases.length - 4} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Similar Companies */}

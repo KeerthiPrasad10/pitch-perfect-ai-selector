@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCaseData } from "@/data/useCaseData";
-import { BadgeDollarSign, Briefcase, Sparkles, FileText, UserCheck, Users } from "lucide-react";
+import { BadgeDollarSign, Briefcase, Sparkles, FileText, UserCheck, Users, Target, TrendingUp } from "lucide-react";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
@@ -12,9 +11,17 @@ interface UseCaseGridProps {
   selectedCategory: string;
   aiRecommendations?: any[];
   customerName?: string;
+  relatedIndustries?: any[];
 }
 
-export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, aiRecommendations = [], customerName }: UseCaseGridProps) => {
+export const UseCaseGrid = ({ 
+  selectedIndustry, 
+  searchTerm, 
+  selectedCategory, 
+  aiRecommendations = [], 
+  customerName,
+  relatedIndustries = []
+}: UseCaseGridProps) => {
   // Convert AI recommendations to the format expected by the grid
   const documentUseCases = Array.isArray(aiRecommendations) ? aiRecommendations.map((useCase, index) => ({
     id: `doc-${index}`,
@@ -29,8 +36,30 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     isFromDocuments: true,
     ragEnhanced: useCase?.ragEnhanced || false,
     ragSources: useCase?.ragSources || [],
-    sources: useCase?.sources || []
+    sources: useCase?.sources || [],
+    industryRelevance: 'primary'
   })) : [];
+
+  // Generate use cases from related industries
+  const relatedIndustryUseCases = relatedIndustries.flatMap((industryInfo, industryIndex) => 
+    industryInfo.useCases.slice(0, 3).map((useCase: string, index: number) => ({
+      id: `related-${industryIndex}-${index}`,
+      title: useCase,
+      description: `${useCase} solution tailored for ${industryInfo.industry} industry with applications in ${selectedIndustry}`,
+      category: 'cross-industry',
+      roi: industryInfo.relevance === 'primary' ? '150' : industryInfo.relevance === 'secondary' ? '120' : '100',
+      implementation: 'Medium',
+      timeline: industryInfo.relevance === 'primary' ? '6-12 months' : '12-18 months',
+      industries: [industryInfo.industry],
+      costSavings: industryInfo.relevance === 'primary' ? '$500K+' : '$250K+',
+      isFromDocuments: false,
+      ragEnhanced: false,
+      ragSources: [],
+      sources: [],
+      industryRelevance: industryInfo.relevance,
+      sourceIndustry: industryInfo.industry
+    }))
+  );
 
   // Only show document-based use cases and industry-specific static use cases
   const filteredStaticUseCases = useCaseData.filter(useCase => {
@@ -46,12 +75,20 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     isFromDocuments: false,
     ragEnhanced: false,
     ragSources: [],
-    sources: []
+    sources: [],
+    industryRelevance: 'primary'
   }));
 
-  // Prioritize document-based recommendations
+  // Prioritize: document-based recommendations, then related industry use cases, then static use cases
   const allUseCases = [
     ...documentUseCases, // From uploaded documents (highest priority)
+    ...relatedIndustryUseCases.filter(useCase => {
+      const matchesSearch = !searchTerm || 
+        useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        useCase.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !selectedCategory || selectedCategory === "all" || useCase.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    }), // From related industries
     ...filteredStaticUseCases // Static industry-specific use cases
   ];
 
@@ -71,6 +108,24 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     }
   };
 
+  const getRelevanceBadgeColor = (relevance: string) => {
+    switch (relevance) {
+      case 'primary': return 'bg-purple-100 text-purple-800';
+      case 'secondary': return 'bg-blue-100 text-blue-800';
+      case 'tertiary': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getRelevanceIcon = (relevance: string) => {
+    switch (relevance) {
+      case 'primary': return <Target className="h-3 w-3" />;
+      case 'secondary': return <TrendingUp className="h-3 w-3" />;
+      case 'tertiary': return <Briefcase className="h-3 w-3" />;
+      default: return <FileText className="h-3 w-3" />;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -78,13 +133,13 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
           {allUseCases.length} AI Solution{allUseCases.length !== 1 ? 's' : ''} for {customerName}
           {documentUseCases.length > 0 && (
             <span className="ml-2 text-sm text-purple-600 font-normal">
-              ({documentUseCases.length} from uploaded documents)
+              ({documentUseCases.length} from documents, {relatedIndustryUseCases.length} cross-industry)
             </span>
           )}
         </h2>
         <div className="text-sm text-gray-600 flex items-center space-x-2">
           <FileText className="h-4 w-4" />
-          <span>Document-based recommendations prioritized</span>
+          <span>Multi-industry AI opportunities</span>
         </div>
       </div>
 
@@ -103,7 +158,9 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
           <Card key={useCase.id} className={`hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4 ${
             useCase.isFromDocuments 
               ? 'border-l-purple-500 bg-gradient-to-br from-purple-50 to-white' 
-              : 'border-l-gray-300 bg-white'
+              : useCase.industryRelevance === 'secondary' || useCase.industryRelevance === 'tertiary'
+                ? 'border-l-blue-400 bg-gradient-to-br from-blue-50 to-white'
+                : 'border-l-gray-300 bg-white'
           }`}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -123,6 +180,14 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
                 {useCase.isFromDocuments && (
                   <Badge className="text-xs bg-purple-100 text-purple-800">
                     From Documents
+                  </Badge>
+                )}
+                {useCase.industryRelevance && useCase.industryRelevance !== 'primary' && (
+                  <Badge className={`text-xs ${getRelevanceBadgeColor(useCase.industryRelevance)} flex items-center space-x-1`}>
+                    {getRelevanceIcon(useCase.industryRelevance)}
+                    <span>
+                      {useCase.sourceIndustry ? `From ${useCase.sourceIndustry}` : 'Cross-Industry'}
+                    </span>
                   </Badge>
                 )}
                 {useCase.ragEnhanced && (
@@ -204,7 +269,10 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
                 </div>
 
                 <div className="text-xs text-gray-500">
-                  <strong>Industry:</strong> {selectedIndustry}
+                  <strong>Target Industry:</strong> {useCase.sourceIndustry || selectedIndustry}
+                  {useCase.sourceIndustry && useCase.sourceIndustry !== selectedIndustry && (
+                    <span className="ml-1 text-blue-600">(applicable to {selectedIndustry})</span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -214,3 +282,19 @@ export const UseCaseGrid = ({ selectedIndustry, searchTerm, selectedCategory, ai
     </div>
   );
 };
+
+function getRoiColor(roi: string) {
+  const roiValue = parseInt(roi) || 0;
+  if (roiValue >= 200) return "bg-green-100 text-green-800";
+  if (roiValue >= 100) return "bg-yellow-100 text-yellow-800";
+  return "bg-blue-100 text-blue-800";
+}
+
+function getImplementationColor(complexity: string) {
+  switch (complexity) {
+    case "Low": return "bg-green-100 text-green-800";
+    case "Medium": return "bg-yellow-100 text-yellow-800";
+    case "High": return "bg-red-100 text-red-800";
+    default: return "bg-gray-100 text-gray-800";
+  }
+}

@@ -16,12 +16,14 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [showResults, setShowResults] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
+  const [relatedIndustries, setRelatedIndustries] = useState<any[]>([]);
   const { toast } = useToast();
 
-  const handleIndustrySelected = (industry: string, customer: string, recommendations: any[] = []) => {
+  const handleIndustrySelected = (industry: string, customer: string, recommendations: any[] = [], related: any[] = []) => {
     setSelectedIndustry(industry || "");
     setCustomerName(customer || "");
     setAiRecommendations(recommendations || []);
+    setRelatedIndustries(related || []);
     setShowResults(true);
   };
 
@@ -31,6 +33,7 @@ const Index = () => {
     setSearchTerm("");
     setSelectedCategory("all");
     setAiRecommendations([]);
+    setRelatedIndustries([]);
     setShowResults(false);
   };
 
@@ -205,6 +208,11 @@ const Index = () => {
                           • {aiRecommendations.length} AI-powered recommendations
                         </span>
                       )}
+                      {relatedIndustries.length > 0 && (
+                        <span className="ml-2 text-indigo-600">
+                          • {relatedIndustries.length} related industries analyzed
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-xl shadow-md">
@@ -236,6 +244,8 @@ const Index = () => {
               searchTerm={searchTerm}
               selectedCategory={selectedCategory}
               aiRecommendations={aiRecommendations}
+              customerName={customerName}
+              relatedIndustries={relatedIndustries}
             />
           </>
         )}
@@ -243,5 +253,35 @@ const Index = () => {
     </div>
   );
 };
+
+function handleExportReport() {
+  if (!showResults) {
+    toast({
+      title: "No data to export",
+      description: "Please analyze a customer first to generate a report.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  try {
+    exportToExcel(customerName, selectedIndustry, aiRecommendations, searchTerm, selectedCategory);
+    toast({
+      title: "Report exported successfully",
+      description: "The Excel file has been downloaded to your computer.",
+    });
+  } catch (error) {
+    toast({
+      title: "Export failed",
+      description: "There was an error generating the Excel file.",
+      variant: "destructive",
+    });
+  }
+}
+
+function formatIndustryName(industry: string) {
+  if (!industry || typeof industry !== 'string') return '';
+  return industry.charAt(0).toUpperCase() + industry.slice(1);
+}
 
 export default Index;
