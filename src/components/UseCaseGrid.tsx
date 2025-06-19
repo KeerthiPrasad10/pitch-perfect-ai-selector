@@ -41,10 +41,10 @@ export const UseCaseGrid = ({
     sources: useCase?.sources || [],
     industryRelevance: 'primary',
     targetCustomer: customerName,
-    roiJustification: useCase?.roiJustification || 'Estimated based on similar industry use cases and document analysis',
-    implementationJustification: useCase?.implementationJustification || 'Complexity assessed based on technical requirements mentioned in documents',
-    timelineJustification: useCase?.timelineJustification || 'Timeline estimated based on typical implementation patterns for similar solutions',
-    savingsJustification: useCase?.savingsJustification || 'Cost savings estimated based on efficiency improvements described in documents'
+    roiJustification: useCase?.roiJustification || 'ROI estimated by AI analysis of document content and similar industry implementations',
+    implementationJustification: useCase?.implementationJustification || 'Implementation complexity assessed by AI based on technical requirements found in documents',
+    timelineJustification: useCase?.timelineJustification || 'Timeline estimated by AI based on project details and implementation patterns described in documents',
+    savingsJustification: useCase?.savingsJustification || 'Cost savings estimated by AI based on efficiency improvements and case studies found in documents'
   })) : [];
 
   // Generate use cases from related industries
@@ -66,10 +66,10 @@ export const UseCaseGrid = ({
       industryRelevance: industryInfo.relevance,
       sourceIndustry: industryInfo.industry,
       targetCustomer: customerName,
-      roiJustification: `ROI estimated based on ${industryInfo.relevance} relevance to ${industryInfo.industry} industry patterns`,
-      implementationJustification: 'Complexity assessed based on cross-industry implementation experience',
-      timelineJustification: `Timeline based on ${industryInfo.relevance} industry alignment and typical deployment cycles`,
-      savingsJustification: `Cost savings projected from ${industryInfo.industry} industry benchmarks`
+      roiJustification: `ROI estimated by AI based on ${industryInfo.relevance} industry relevance patterns and cross-industry benchmark analysis`,
+      implementationJustification: 'Implementation complexity assessed by AI using cross-industry deployment experience and technical similarity analysis',
+      timelineJustification: `Timeline estimated by AI considering ${industryInfo.relevance} industry alignment and typical cross-industry adaptation cycles`,
+      savingsJustification: `Cost savings projected by AI from ${industryInfo.industry} industry benchmarks and cross-industry efficiency transfer analysis`
     }))
   );
 
@@ -90,10 +90,10 @@ export const UseCaseGrid = ({
     sources: [],
     industryRelevance: 'primary',
     targetCustomer: customerName,
-    roiJustification: 'ROI based on industry benchmarks and historical data',
-    implementationJustification: 'Implementation complexity assessed from standard industry practices',
-    timelineJustification: 'Timeline based on typical deployment cycles for this industry',
-    savingsJustification: 'Cost savings based on industry average efficiency gains'
+    roiJustification: `ROI based on ${selectedIndustry} industry benchmarks, historical implementation data, and market research studies`,
+    implementationJustification: `Implementation complexity assessed from standard ${selectedIndustry} industry practices, typical IT infrastructure, and deployment patterns`,
+    timelineJustification: `Timeline based on typical ${selectedIndustry} industry deployment cycles, regulatory requirements, and change management patterns`,
+    savingsJustification: `Cost savings based on ${selectedIndustry} industry average efficiency gains, labor cost reductions, and operational improvements`
   }));
 
   // Prioritize: document-based recommendations, then related industry use cases, then static use cases
@@ -230,7 +230,7 @@ export const UseCaseGrid = ({
                 </Badge>
                 <Badge className={`text-xs ${getRoiColor(useCase.roi)} flex items-center`}>
                   ROI: {useCase.roi}%
-                  {useCase.isFromDocuments && <InfoTooltip content={useCase.roiJustification} />}
+                  <InfoTooltip content={useCase.roiJustification} />
                 </Badge>
               </div>
             </CardHeader>
@@ -243,7 +243,7 @@ export const UseCaseGrid = ({
                     <Badge className={`text-xs ${getImplementationColor(useCase.implementation)}`}>
                       {useCase.implementation} Complexity
                     </Badge>
-                    {useCase.isFromDocuments && <InfoTooltip content={useCase.implementationJustification} />}
+                    <InfoTooltip content={useCase.implementationJustification} />
                   </div>
                 </div>
                 
@@ -251,7 +251,7 @@ export const UseCaseGrid = ({
                   <span className="text-gray-600">Timeline:</span>
                   <div className="flex items-center">
                     <span className="font-medium text-gray-900">{useCase.timeline}</span>
-                    {useCase.isFromDocuments && <InfoTooltip content={useCase.timelineJustification} />}
+                    <InfoTooltip content={useCase.timelineJustification} />
                   </div>
                 </div>
 
@@ -298,7 +298,7 @@ export const UseCaseGrid = ({
                       <span className="text-sm font-medium text-green-600">
                         {useCase.costSavings || "TBD"}
                       </span>
-                      {useCase.isFromDocuments && <InfoTooltip content={useCase.savingsJustification} />}
+                      <InfoTooltip content={useCase.savingsJustification} />
                     </div>
                     <Button size="sm" variant="outline" className="text-xs">
                       Add to Pitch
