@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCaseData } from "@/data/useCaseData";
-import { BadgeDollarSign, Briefcase, Sparkles, FileText, UserCheck, Users, Target, TrendingUp, Info } from "lucide-react";
+import { BadgeDollarSign, Briefcase, Sparkles, FileText, UserCheck, Users, Target, TrendingUp, Info, CheckCircle } from "lucide-react";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
@@ -14,6 +13,7 @@ interface UseCaseGridProps {
   aiRecommendations?: any[];
   customerName?: string;
   relatedIndustries?: any[];
+  customerAnalysis?: any;
 }
 
 export const UseCaseGrid = ({ 
@@ -22,8 +22,20 @@ export const UseCaseGrid = ({
   selectedCategory, 
   aiRecommendations = [], 
   customerName,
-  relatedIndustries = []
+  relatedIndustries = [],
+  customerAnalysis
 }: UseCaseGridProps) => {
+  // Get current use cases from customer analysis
+  const currentUseCases = customerAnalysis?.currentUseCases || [];
+
+  // Function to check if a use case is already in use
+  const isExistingUseCase = (useCaseTitle: string) => {
+    return currentUseCases.some((existing: string) => 
+      existing.toLowerCase().includes(useCaseTitle.toLowerCase()) ||
+      useCaseTitle.toLowerCase().includes(existing.toLowerCase())
+    );
+  };
+
   // Convert AI recommendations to the format expected by the grid
   const documentUseCases = Array.isArray(aiRecommendations) ? aiRecommendations.map((useCase, index) => ({
     id: `doc-${index}`,
@@ -44,7 +56,8 @@ export const UseCaseGrid = ({
     roiJustification: useCase?.roiJustification || 'ROI estimated by AI analysis of document content and similar industry implementations',
     implementationJustification: useCase?.implementationJustification || 'Implementation complexity assessed by AI based on technical requirements found in documents',
     timelineJustification: useCase?.timelineJustification || 'Timeline estimated by AI based on project details and implementation patterns described in documents',
-    savingsJustification: useCase?.savingsJustification || 'Cost savings estimated by AI based on efficiency improvements and case studies found in documents'
+    savingsJustification: useCase?.savingsJustification || 'Cost savings estimated by AI based on efficiency improvements and case studies found in documents',
+    isExisting: isExistingUseCase(useCase?.title || 'AI Recommendation')
   })) : [];
 
   // Generate use cases from related industries
@@ -69,7 +82,8 @@ export const UseCaseGrid = ({
       roiJustification: `ROI estimated by AI based on ${industryInfo.relevance} industry relevance patterns and cross-industry benchmark analysis`,
       implementationJustification: 'Implementation complexity assessed by AI using cross-industry deployment experience and technical similarity analysis',
       timelineJustification: `Timeline estimated by AI considering ${industryInfo.relevance} industry alignment and typical cross-industry adaptation cycles`,
-      savingsJustification: `Cost savings projected by AI from ${industryInfo.industry} industry benchmarks and cross-industry efficiency transfer analysis`
+      savingsJustification: `Cost savings projected by AI from ${industryInfo.industry} industry benchmarks and cross-industry efficiency transfer analysis`,
+      isExisting: isExistingUseCase(useCase)
     }))
   );
 
@@ -93,7 +107,8 @@ export const UseCaseGrid = ({
     roiJustification: `ROI based on ${selectedIndustry} industry benchmarks, historical implementation data, and market research studies`,
     implementationJustification: `Implementation complexity assessed from standard ${selectedIndustry} industry practices, typical IT infrastructure, and deployment patterns`,
     timelineJustification: `Timeline based on typical ${selectedIndustry} industry deployment cycles, regulatory requirements, and change management patterns`,
-    savingsJustification: `Cost savings based on ${selectedIndustry} industry average efficiency gains, labor cost reductions, and operational improvements`
+    savingsJustification: `Cost savings based on ${selectedIndustry} industry average efficiency gains, labor cost reductions, and operational improvements`,
+    isExisting: isExistingUseCase(useCase.title)
   }));
 
   // Prioritize: document-based recommendations, then related industry use cases, then static use cases
@@ -186,11 +201,13 @@ export const UseCaseGrid = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {allUseCases.map((useCase) => (
           <Card key={useCase.id} className={`hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4 ${
-            useCase.isFromDocuments 
-              ? 'border-l-purple-500 bg-gradient-to-br from-purple-50 to-white' 
-              : useCase.industryRelevance === 'secondary' || useCase.industryRelevance === 'tertiary'
-                ? 'border-l-blue-400 bg-gradient-to-br from-blue-50 to-white'
-                : 'border-l-gray-300 bg-white'
+            useCase.isExisting
+              ? 'border-l-green-500 bg-gradient-to-br from-green-50 to-white shadow-green-100'
+              : useCase.isFromDocuments 
+                ? 'border-l-purple-500 bg-gradient-to-br from-purple-50 to-white' 
+                : useCase.industryRelevance === 'secondary' || useCase.industryRelevance === 'tertiary'
+                  ? 'border-l-blue-400 bg-gradient-to-br from-blue-50 to-white'
+                  : 'border-l-gray-300 bg-white'
           }`}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -200,6 +217,9 @@ export const UseCaseGrid = ({
                     {useCase.isFromDocuments && (
                       <FileText className="h-4 w-4 text-purple-600" />
                     )}
+                    {useCase.isExisting && (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    )}
                   </div>
                   <CardDescription className="text-gray-600 text-sm leading-relaxed">
                     {useCase.description}
@@ -207,6 +227,12 @@ export const UseCaseGrid = ({
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
+                {useCase.isExisting && (
+                  <Badge className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
+                    <CheckCircle className="h-3 w-3" />
+                    <span>Existing Use Case</span>
+                  </Badge>
+                )}
                 {useCase.isFromDocuments && (
                   <Badge className="text-xs bg-purple-100 text-purple-800">
                     From Documents
@@ -301,7 +327,7 @@ export const UseCaseGrid = ({
                       <InfoTooltip content={useCase.savingsJustification} />
                     </div>
                     <Button size="sm" variant="outline" className="text-xs">
-                      Add to Pitch
+                      {useCase.isExisting ? 'Expand Usage' : 'Add to Pitch'}
                     </Button>
                   </div>
                 </div>
