@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Building2, TrendingUp, Sparkles, FileText, Loader2, CheckCircle2, AlertCircle, Users, UserCheck, Target, Briefcase } from "lucide-react";
+import { Search, Building2, TrendingUp, Sparkles, FileText, Loader2, CheckCircle2, AlertCircle, Users, UserCheck, Target, Briefcase, Cloud, Server } from "lucide-react";
 
 interface CustomerInputProps {
   onIndustrySelected: (industry: string, customer: string, recommendations: any[], relatedIndustries?: any[]) => void;
@@ -225,6 +224,14 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
     }
   };
 
+  const getDeploymentIcon = (deploymentType: string) => {
+    return deploymentType?.toLowerCase() === 'cloud' ? (
+      <Cloud className="h-3 w-3" />
+    ) : (
+      <Server className="h-3 w-3" />
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Customer Input Card */}
@@ -326,19 +333,20 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
                         </Badge>
                       </div>
                     )}
-                    {analysisResult.companyDetails?.ifsVersion && (
+                    {analysisResult.companyDetails?.softwareReleaseVersion && (
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">IFS Version:</span>
+                        <span className="text-sm font-medium text-gray-700">IFS Release:</span>
                         <Badge className="bg-green-100 text-green-800">
-                          {analysisResult.companyDetails.ifsVersion}
+                          {analysisResult.companyDetails.softwareReleaseVersion}
                         </Badge>
                       </div>
                     )}
-                    {analysisResult.companyDetails?.softwareReleaseVersion && (
+                    {analysisResult.companyDetails?.deploymentType && (
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Software Release:</span>
-                        <Badge className="bg-green-100 text-green-800">
-                          {analysisResult.companyDetails.softwareReleaseVersion}
+                        <span className="text-sm font-medium text-gray-700">Deployment:</span>
+                        <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
+                          {getDeploymentIcon(analysisResult.companyDetails.deploymentType)}
+                          <span>{analysisResult.companyDetails.deploymentType}</span>
                         </Badge>
                       </div>
                     )}

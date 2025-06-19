@@ -17,7 +17,8 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
         ...exactMatch,
         customer_number: exactMatch.customer_no || exactMatch.customer_number,
         software_release_version: exactMatch.ifs_software_release_version || exactMatch.software_release_version,
-        ifs_version: exactMatch.ifs_version
+        ifs_version: exactMatch.ifs_version,
+        deployment_type: exactMatch.ifs_version // Cloud or Remote
       };
     }
 
@@ -36,7 +37,8 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
         ...match,
         customer_number: match.customer_no || match.customer_number,
         software_release_version: match.ifs_software_release_version || match.software_release_version,
-        ifs_version: match.ifs_version
+        ifs_version: match.ifs_version,
+        deployment_type: match.ifs_version // Cloud or Remote
       };
     }
 
@@ -68,7 +70,8 @@ export async function searchSimilarIFSCompanies(companyName: string, supabase: a
       isIFSCustomer: true,
       customerNumber: company.customer_no || company.customer_number,
       ifsVersion: company.ifs_version,
-      softwareReleaseVersion: company.ifs_software_release_version || company.software_release_version
+      softwareReleaseVersion: company.ifs_software_release_version || company.software_release_version,
+      deploymentType: company.ifs_version // Cloud or Remote
     })) || [];
   } catch (error) {
     console.log('Error in similar company search:', error);
