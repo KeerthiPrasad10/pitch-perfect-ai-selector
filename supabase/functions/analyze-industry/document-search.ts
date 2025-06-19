@@ -70,7 +70,7 @@ export async function searchDocumentUseCases(
 Document content:
 ${documentsText}
 
-Please extract and format ONLY the use cases mentioned in these documents. Return as a JSON array with this structure:
+Please extract and format ONLY the use cases mentioned in these documents. For each use case, provide detailed justifications for your estimates based on the document content. Return as a JSON array with this structure:
 [
   {
     "title": "Use Case Title",
@@ -79,11 +79,19 @@ Please extract and format ONLY the use cases mentioned in these documents. Retur
     "roi": "estimated_roi_percentage",
     "implementation": "Low|Medium|High",
     "timeline": "time_estimate",
-    "source": "document_source"
+    "source": "document_source",
+    "roiJustification": "Explanation of why this ROI was estimated based on document content",
+    "implementationJustification": "Explanation of complexity assessment based on technical details in documents", 
+    "timelineJustification": "Explanation of timeline estimate based on project details mentioned in documents",
+    "savingsJustification": "Explanation of cost savings estimate based on efficiency improvements described in documents"
   }
 ]
 
-IMPORTANT: Only extract use cases that are explicitly mentioned in the provided documents. Do not create new use cases.`;
+IMPORTANT: 
+- Only extract use cases that are explicitly mentioned in the provided documents
+- Base all estimates (ROI, implementation, timeline, savings) on specific facts from the documents
+- Provide clear justifications referencing document content
+- If documents don't contain enough detail for estimates, mention this in justifications`;
 
     const extractionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -96,7 +104,7 @@ IMPORTANT: Only extract use cases that are explicitly mentioned in the provided 
         messages: [
           { 
             role: 'system', 
-            content: 'You are an expert at extracting AI/ML use cases from technical documents. Only extract information that is explicitly mentioned in the provided text.' 
+            content: 'You are an expert at extracting AI/ML use cases from technical documents. Only extract information that is explicitly mentioned in the provided text and provide detailed justifications for all estimates.' 
           },
           { role: 'user', content: extractionPrompt }
         ],

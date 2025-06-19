@@ -1,9 +1,11 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCaseData } from "@/data/useCaseData";
-import { BadgeDollarSign, Briefcase, Sparkles, FileText, UserCheck, Users, Target, TrendingUp } from "lucide-react";
+import { BadgeDollarSign, Briefcase, Sparkles, FileText, UserCheck, Users, Target, TrendingUp, Info } from "lucide-react";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
@@ -38,7 +40,11 @@ export const UseCaseGrid = ({
     ragSources: useCase?.ragSources || [],
     sources: useCase?.sources || [],
     industryRelevance: 'primary',
-    targetCustomer: customerName // Add the correct customer name
+    targetCustomer: customerName,
+    roiJustification: useCase?.roiJustification || 'Estimated based on similar industry use cases and document analysis',
+    implementationJustification: useCase?.implementationJustification || 'Complexity assessed based on technical requirements mentioned in documents',
+    timelineJustification: useCase?.timelineJustification || 'Timeline estimated based on typical implementation patterns for similar solutions',
+    savingsJustification: useCase?.savingsJustification || 'Cost savings estimated based on efficiency improvements described in documents'
   })) : [];
 
   // Generate use cases from related industries
@@ -59,7 +65,11 @@ export const UseCaseGrid = ({
       sources: [],
       industryRelevance: industryInfo.relevance,
       sourceIndustry: industryInfo.industry,
-      targetCustomer: customerName // Add the correct customer name
+      targetCustomer: customerName,
+      roiJustification: `ROI estimated based on ${industryInfo.relevance} relevance to ${industryInfo.industry} industry patterns`,
+      implementationJustification: 'Complexity assessed based on cross-industry implementation experience',
+      timelineJustification: `Timeline based on ${industryInfo.relevance} industry alignment and typical deployment cycles`,
+      savingsJustification: `Cost savings projected from ${industryInfo.industry} industry benchmarks`
     }))
   );
 
@@ -79,7 +89,11 @@ export const UseCaseGrid = ({
     ragSources: [],
     sources: [],
     industryRelevance: 'primary',
-    targetCustomer: customerName // Add the correct customer name
+    targetCustomer: customerName,
+    roiJustification: 'ROI based on industry benchmarks and historical data',
+    implementationJustification: 'Implementation complexity assessed from standard industry practices',
+    timelineJustification: 'Timeline based on typical deployment cycles for this industry',
+    savingsJustification: 'Cost savings based on industry average efficiency gains'
   }));
 
   // Prioritize: document-based recommendations, then related industry use cases, then static use cases
@@ -128,6 +142,19 @@ export const UseCaseGrid = ({
       default: return <FileText className="h-3 w-3" />;
     }
   };
+
+  const InfoTooltip = ({ content }: { content: string }) => (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Info className="h-3 w-3 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p className="text-xs">{content}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 
   return (
     <div className="space-y-6">
@@ -201,8 +228,9 @@ export const UseCaseGrid = ({
                 <Badge variant="secondary" className="text-xs">
                   {useCase.category.replace('-', ' ')}
                 </Badge>
-                <Badge className={`text-xs ${getRoiColor(useCase.roi)}`}>
+                <Badge className={`text-xs ${getRoiColor(useCase.roi)} flex items-center`}>
                   ROI: {useCase.roi}%
+                  {useCase.isFromDocuments && <InfoTooltip content={useCase.roiJustification} />}
                 </Badge>
               </div>
             </CardHeader>
@@ -211,14 +239,20 @@ export const UseCaseGrid = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Implementation:</span>
-                  <Badge className={`text-xs ${getImplementationColor(useCase.implementation)}`}>
-                    {useCase.implementation} Complexity
-                  </Badge>
+                  <div className="flex items-center">
+                    <Badge className={`text-xs ${getImplementationColor(useCase.implementation)}`}>
+                      {useCase.implementation} Complexity
+                    </Badge>
+                    {useCase.isFromDocuments && <InfoTooltip content={useCase.implementationJustification} />}
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Timeline:</span>
-                  <span className="font-medium text-gray-900">{useCase.timeline}</span>
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-900">{useCase.timeline}</span>
+                    {useCase.isFromDocuments && <InfoTooltip content={useCase.timelineJustification} />}
+                  </div>
                 </div>
 
                 {useCase.sources && useCase.sources.length > 0 && (
@@ -264,6 +298,7 @@ export const UseCaseGrid = ({
                       <span className="text-sm font-medium text-green-600">
                         {useCase.costSavings || "TBD"}
                       </span>
+                      {useCase.isFromDocuments && <InfoTooltip content={useCase.savingsJustification} />}
                     </div>
                     <Button size="sm" variant="outline" className="text-xs">
                       Add to Pitch
