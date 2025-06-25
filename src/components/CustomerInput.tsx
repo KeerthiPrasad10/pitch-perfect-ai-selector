@@ -318,13 +318,6 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-white/80 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Industry:</span>
-                  <Badge className={analysisResult.customerType === 'customer' ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
-                    {analysisResult.industry}
-                  </Badge>
-                </div>
-                
                 {analysisResult.customerType === 'customer' && (
                   <>
                     {analysisResult.companyDetails?.customerNumber && (
@@ -335,28 +328,28 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
                         </Badge>
                       </div>
                     )}
-                    {analysisResult.companyDetails?.softwareReleaseVersion && (
+                    {analysisResult.companyDetails?.releaseVersion && (
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">IFS Release:</span>
+                        <span className="text-sm font-medium text-gray-700">Release Version:</span>
                         <Badge className="bg-green-100 text-green-800">
-                          {analysisResult.companyDetails.softwareReleaseVersion}
+                          {analysisResult.companyDetails.releaseVersion}
                         </Badge>
                       </div>
                     )}
-                    {analysisResult.companyDetails?.deploymentType && (
+                    {analysisResult.companyDetails?.baseIfsVersion && (
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Base Version:</span>
+                        <Badge className="bg-green-100 text-green-800">
+                          {analysisResult.companyDetails.baseIfsVersion}
+                        </Badge>
+                      </div>
+                    )}
+                    {analysisResult.companyDetails?.ifsVersion && (
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-gray-700">Deployment:</span>
                         <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
-                          {getDeploymentIcon(analysisResult.companyDetails.deploymentType)}
-                          <span>{analysisResult.companyDetails.deploymentType}</span>
-                        </Badge>
-                      </div>
-                    )}
-                    {analysisResult.companyDetails?.customerSince && (
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Customer Since:</span>
-                        <Badge className="bg-green-100 text-green-800">
-                          {analysisResult.companyDetails.customerSince}
+                          {getDeploymentIcon(analysisResult.companyDetails.ifsVersion)}
+                          <span>{analysisResult.companyDetails.ifsVersion}</span>
                         </Badge>
                       </div>
                     )}
