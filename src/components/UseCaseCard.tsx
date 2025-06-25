@@ -1,10 +1,9 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { BadgeDollarSign, FileText, CheckCircle, Target, TrendingUp, Briefcase } from "lucide-react";
+import { FileText, CheckCircle, Target, TrendingUp, Briefcase } from "lucide-react";
 import { InfoTooltip } from "./InfoTooltip";
-import { getRoiColor, getImplementationColor, getRelevanceBadgeColor } from "@/utils/useCaseUtils";
+import { getRoiColor, getRelevanceBadgeColor } from "@/utils/useCaseUtils";
 
 interface UseCaseCardProps {
   useCase: any;
@@ -85,24 +84,6 @@ export const UseCaseCard = ({ useCase, selectedIndustry }: UseCaseCardProps) => 
       
       <CardContent className="pt-0">
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Implementation:</span>
-            <div className="flex items-center">
-              <Badge className={`text-xs ${getImplementationColor(useCase.implementation)}`}>
-                {useCase.implementation} Complexity
-              </Badge>
-              <InfoTooltip content={useCase.implementationJustification} />
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Timeline:</span>
-            <div className="flex items-center">
-              <span className="font-medium text-gray-900">{useCase.timeline}</span>
-              <InfoTooltip content={useCase.timelineJustification} />
-            </div>
-          </div>
-
           {useCase.sources && useCase.sources.length > 0 && (
             <div className="border-t pt-3">
               <div className="text-xs text-gray-600 mb-2">
@@ -138,21 +119,6 @@ export const UseCaseCard = ({ useCase, selectedIndustry }: UseCaseCardProps) => 
               </div>
             </div>
           )}
-
-          <div className="border-t pt-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-1">
-                <BadgeDollarSign className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium text-green-600">
-                  {useCase.costSavings || "TBD"}
-                </span>
-                <InfoTooltip content={useCase.savingsJustification} />
-              </div>
-              <Button size="sm" variant="outline" className="text-xs">
-                {useCase.isExisting ? 'Expand Usage' : 'Add to Pitch'}
-              </Button>
-            </div>
-          </div>
 
           <div className="text-xs text-gray-500">
             <strong>Target Industry:</strong> {useCase.sourceIndustry || selectedIndustry}

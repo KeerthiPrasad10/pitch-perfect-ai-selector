@@ -21,7 +21,9 @@ export async function getCompanyDetails(
         ifsVersion: ifsCustomerData.ifs_version || "IFS Cloud",
         customerSince: "2020+",
         customerNumber: ifsCustomerData.customer_number || ifsCustomerData.customer_no,
-        softwareReleaseVersion: ifsCustomerData.software_release_version || ifsCustomerData.ifs_software_release_version
+        softwareReleaseVersion: ifsCustomerData.software_release_version || ifsCustomerData.ifs_software_release_version,
+        releaseVersion: ifsCustomerData.release_version,
+        baseIfsVersion: ifsCustomerData.base_ifs_version
       })
     };
   }
@@ -91,7 +93,9 @@ Format as JSON:
         ifsVersion: ifsCustomerData.ifs_version || "IFS Cloud",
         customerSince: "2020+",
         customerNumber: ifsCustomerData.customer_number || ifsCustomerData.customer_no,
-        softwareReleaseVersion: ifsCustomerData.software_release_version || ifsCustomerData.ifs_software_release_version
+        softwareReleaseVersion: ifsCustomerData.software_release_version || ifsCustomerData.ifs_software_release_version,
+        releaseVersion: ifsCustomerData.release_version,
+        baseIfsVersion: ifsCustomerData.base_ifs_version
       })
     };
 
@@ -197,7 +201,9 @@ function getBasicCompanyDetails(companyName: string, isIFSCustomer: boolean, ifs
       ifsVersion: ifsCustomerData.ifs_version || "IFS Cloud",
       customerSince: "2020+",
       customerNumber: ifsCustomerData.customer_number || ifsCustomerData.customer_no,
-      softwareReleaseVersion: ifsCustomerData.software_release_version || ifsCustomerData.ifs_software_release_version
+      softwareReleaseVersion: ifsCustomerData.software_release_version || ifsCustomerData.ifs_software_release_version,
+      releaseVersion: ifsCustomerData.release_version,
+      baseIfsVersion: ifsCustomerData.base_ifs_version
     })
   };
 }

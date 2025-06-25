@@ -221,12 +221,27 @@ const Index = () => {
                           • {relatedIndustries.length} related industries analyzed
                         </span>
                       )}
-                      {customerAnalysis?.companyDetails?.ifsVersion && (
-                        <span className="ml-2 text-green-600">
-                          • Running {customerAnalysis.companyDetails.ifsVersion}
-                        </span>
-                      )}
                     </p>
+                    {/* IFS Version Details */}
+                    {customerAnalysis?.companyDetails && (
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        {customerAnalysis.companyDetails.releaseVersion && (
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            Release Version: {customerAnalysis.companyDetails.releaseVersion}
+                          </span>
+                        )}
+                        {customerAnalysis.companyDetails.baseIfsVersion && (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                            Base IFS Version: {customerAnalysis.companyDetails.baseIfsVersion}
+                          </span>
+                        )}
+                        {customerAnalysis.companyDetails.ifsVersion && (
+                          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                            Deployment: {customerAnalysis.companyDetails.ifsVersion}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-xl shadow-md">
                     <Target className="h-6 w-6 text-white" />
@@ -259,6 +274,7 @@ const Index = () => {
               aiRecommendations={aiRecommendations}
               customerName={customerName}
               relatedIndustries={relatedIndustries}
+              customerAnalysis={customerAnalysis}
             />
           </>
         )}

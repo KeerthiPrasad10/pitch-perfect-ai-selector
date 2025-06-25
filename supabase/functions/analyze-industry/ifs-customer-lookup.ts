@@ -18,7 +18,9 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
         customer_number: exactMatch.customer_no || exactMatch.customer_number,
         software_release_version: exactMatch.ifs_software_release_version || exactMatch.software_release_version,
         ifs_version: exactMatch.ifs_version,
-        deployment_type: exactMatch.ifs_version // Cloud or Remote
+        deployment_type: exactMatch.ifs_version, // Cloud or Remote
+        release_version: exactMatch.ifs_software_release_version || exactMatch.software_release_version,
+        base_ifs_version: extractBaseVersion(exactMatch.ifs_software_release_version || exactMatch.software_release_version)
       };
     }
 
@@ -38,7 +40,9 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
         customer_number: match.customer_no || match.customer_number,
         software_release_version: match.ifs_software_release_version || match.software_release_version,
         ifs_version: match.ifs_version,
-        deployment_type: match.ifs_version // Cloud or Remote
+        deployment_type: match.ifs_version, // Cloud or Remote
+        release_version: match.ifs_software_release_version || match.software_release_version,
+        base_ifs_version: extractBaseVersion(match.ifs_software_release_version || match.software_release_version)
       };
     }
 
@@ -47,6 +51,50 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
   } catch (error) {
     console.log('Error checking IFS customer:', error);
     return null;
+  }
+}
+
+// Extract base version from release version (e.g., "23.1" from "23.1.5" or "22.2" from "22.2.1")
+function extractBaseVersion(releaseVersion: string): string {
+  if (!releaseVersion) return '';
+  
+  // Extract major.minor version (first two numbers)
+  const versionMatch = releaseVersion.match(/^(\d+\.\d+)/);
+  return versionMatch ? versionMatch[1] : releaseVersion;
+}
+
+// Check if ML capability is available based on IFS version
+export function checkMLCapabilityAvailability(releaseVersion: string, baseVersion: string, mlCapability: string): {
+  available: boolean;
+  status: 'available' | 'not-available' | 'upgrade-required';
+  minVersion?: string;
+} {
+  // Define ML capabilities and their minimum version requirements
+  const mlCapabilities: Record<string, string> = {
+    'predictive-maintenance': '22.1',
+    'demand-forecasting': '22.2',
+    'quality-control': '23.1',
+    'supply-chain-optimization': '22.2',
+    'customer-analytics': '23.1',
+    'inventory-optimization': '22.1',
+    'fraud-detection': '23.1',
+    'sentiment-analysis': '23.1',
+    'automated-classification': '22.2',
+    'anomaly-detection': '22.1'
+  };
+
+  const minVersion = mlCapabilities[mlCapability];
+  if (!minVersion) {
+    return { available: false, status: 'not-available' };
+  }
+
+  const currentVersion = parseFloat(baseVersion);
+  const requiredVersion = parseFloat(minVersion);
+
+  if (currentVersion >= requiredVersion) {
+    return { available: true, status: 'available', minVersion };
+  } else {
+    return { available: false, status: 'upgrade-required', minVersion };
   }
 }
 
@@ -71,7 +119,9 @@ export async function searchSimilarIFSCompanies(companyName: string, supabase: a
       customerNumber: company.customer_no || company.customer_number,
       ifsVersion: company.ifs_version,
       softwareReleaseVersion: company.ifs_software_release_version || company.software_release_version,
-      deploymentType: company.ifs_version // Cloud or Remote
+      deploymentType: company.ifs_version, // Cloud or Remote
+      releaseVersion: company.ifs_software_release_version || company.software_release_version,
+      baseIfsVersion: extractBaseVersion(company.ifs_software_release_version || company.software_release_version)
     })) || [];
   } catch (error) {
     console.log('Error in similar company search:', error);

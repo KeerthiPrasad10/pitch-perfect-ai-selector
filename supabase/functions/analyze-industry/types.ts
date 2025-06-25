@@ -10,6 +10,8 @@ export interface CompanyDetails {
   customerSince?: string;
   customerNumber?: string;
   softwareReleaseVersion?: string;
+  releaseVersion?: string;
+  baseIfsVersion?: string;
 }
 
 export interface RelatedIndustry {
