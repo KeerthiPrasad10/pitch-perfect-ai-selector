@@ -8,7 +8,7 @@ export const processDocumentUseCases = (
   customerName: string,
   currentUseCases: string[]
 ) => {
-  return Array.isArray(aiRecommendations) ? aiRecommendations.map((useCase, index) => ({
+  const processedUseCases = Array.isArray(aiRecommendations) ? aiRecommendations.map((useCase, index) => ({
     id: `doc-${index}`,
     title: useCase?.title || 'AI Recommendation',
     description: useCase?.description || 'No description available',
@@ -30,6 +30,13 @@ export const processDocumentUseCases = (
     savingsJustification: useCase?.savingsJustification || 'Cost savings estimated by AI based on efficiency improvements and case studies found in documents',
     isExisting: isExistingUseCase(useCase?.title || 'AI Recommendation', currentUseCases)
   })) : [];
+
+  // Sort to put existing use cases first
+  return processedUseCases.sort((a, b) => {
+    if (a.isExisting && !b.isExisting) return -1;
+    if (!a.isExisting && b.isExisting) return 1;
+    return 0;
+  });
 };
 
 export const processRelatedIndustryUseCases = (
@@ -38,7 +45,7 @@ export const processRelatedIndustryUseCases = (
   customerName: string,
   currentUseCases: string[]
 ) => {
-  return relatedIndustries.flatMap((industryInfo, industryIndex) => 
+  const processedUseCases = relatedIndustries.flatMap((industryInfo, industryIndex) => 
     industryInfo.useCases.slice(0, 3).map((useCase: string, index: number) => ({
       id: `related-${industryIndex}-${index}`,
       title: useCase,
@@ -63,6 +70,13 @@ export const processRelatedIndustryUseCases = (
       isExisting: isExistingUseCase(useCase, currentUseCases)
     }))
   );
+
+  // Sort to put existing use cases first
+  return processedUseCases.sort((a, b) => {
+    if (a.isExisting && !b.isExisting) return -1;
+    if (!a.isExisting && b.isExisting) return 1;
+    return 0;
+  });
 };
 
 export const processStaticUseCases = (
@@ -72,7 +86,7 @@ export const processStaticUseCases = (
   customerName: string,
   currentUseCases: string[]
 ) => {
-  return useCaseData.filter(useCase => {
+  const processedUseCases = useCaseData.filter(useCase => {
     const matchesIndustry = selectedIndustry && useCase.industries.includes(selectedIndustry);
     const matchesSearch = !searchTerm || 
       useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -94,4 +108,11 @@ export const processStaticUseCases = (
     savingsJustification: `Cost savings based on ${selectedIndustry} industry average efficiency gains, labor cost reductions, and operational improvements`,
     isExisting: isExistingUseCase(useCase.title, currentUseCases)
   }));
+
+  // Sort to put existing use cases first
+  return processedUseCases.sort((a, b) => {
+    if (a.isExisting && !b.isExisting) return -1;
+    if (!a.isExisting && b.isExisting) return 1;
+    return 0;
+  });
 };

@@ -25,7 +25,7 @@ export const UseCaseGrid = ({
   // Get current use cases from customer analysis
   const currentUseCases = customerAnalysis?.currentUseCases || [];
 
-  // Process different types of use cases
+  // Process different types of use cases (already sorted with existing cases first)
   const documentUseCases = processDocumentUseCases(
     aiRecommendations, 
     selectedIndustry, 
@@ -54,12 +54,28 @@ export const UseCaseGrid = ({
     currentUseCases
   );
 
-  // Prioritize: document-based recommendations, then related industry use cases, then static use cases
+  // Combine all use cases and sort globally to ensure existing cases are always at the top
   const allUseCases = [
-    ...documentUseCases, // From uploaded documents (highest priority)
-    ...relatedIndustryUseCases, // From related industries
-    ...filteredStaticUseCases // Static industry-specific use cases
-  ];
+    ...documentUseCases,
+    ...relatedIndustryUseCases,
+    ...filteredStaticUseCases
+  ].sort((a, b) => {
+    // Primary sort: existing use cases first
+    if (a.isExisting && !b.isExisting) return -1;
+    if (!a.isExisting && b.isExisting) return 1;
+    
+    // Secondary sort: maintain source priority (document > related > static)
+    if (a.isFromDocuments && !b.isFromDocuments) return -1;
+    if (!a.isFromDocuments && b.isFromDocuments) return 1;
+    
+    if (a.industryRelevance && b.industryRelevance && !a.isFromDocuments && !b.isFromDocuments) {
+      const relevanceOrder = { 'primary': 0, 'secondary': 1, 'tertiary': 2 };
+      return (relevanceOrder[a.industryRelevance as keyof typeof relevanceOrder] || 3) - 
+             (relevanceOrder[b.industryRelevance as keyof typeof relevanceOrder] || 3);
+    }
+    
+    return 0;
+  });
 
   return (
     <div className="space-y-6">
