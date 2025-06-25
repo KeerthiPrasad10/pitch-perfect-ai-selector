@@ -90,6 +90,10 @@ export type Database = {
         Args: { "": string } | { "": unknown }
         Returns: unknown
       }
+      embed_and_vectorize_file: {
+        Args: { file_data: string }
+        Returns: undefined
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown
