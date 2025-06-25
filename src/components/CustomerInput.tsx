@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Building2, TrendingUp, Sparkles, FileText, Loader2, CheckCircle2, AlertCircle, Users, UserCheck, Target, Briefcase, Cloud, Server } from "lucide-react";
+import { Search, Building2, TrendingUp, Sparkles, FileText, Loader2, CheckCircle2, AlertCircle, Users, UserCheck, Target, Briefcase, Cloud, Server, ChevronDown, ChevronRight } from "lucide-react";
 
 interface CustomerInputProps {
   onIndustrySelected: (industry: string, customer: string, recommendations: any[], relatedIndustries?: any[]) => void;
@@ -16,6 +17,7 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
   const [loading, setLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [industryAnalysisOpen, setIndustryAnalysisOpen] = useState(false);
   const { toast } = useToast();
 
   async function searchDocuments(query: string) {
@@ -428,60 +430,73 @@ export const CustomerInput = ({ onIndustrySelected }: CustomerInputProps) => {
           {/* Related Industries */}
           {analysisResult.relatedIndustries && analysisResult.relatedIndustries.length > 0 && (
             <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 rounded-2xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg text-purple-900 flex items-center space-x-2">
-                  <Target className="h-5 w-5" />
-                  <span>Industry Analysis & ML Opportunities</span>
-                </CardTitle>
-                <p className="text-sm text-purple-700">
-                  Core industry and related opportunities ranked by relevance
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {analysisResult.relatedIndustries.map((industryInfo: any, index: number) => (
-                    <div key={index} className="bg-white/80 rounded-lg p-4 border border-purple-100">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Badge className={`text-xs ${getRelevanceBadgeColor(industryInfo.relevance)} flex items-center space-x-1`}>
-                            {getRelevanceIcon(industryInfo.relevance)}
-                            <span>{industryInfo.relevance === 'primary' ? 'Core Industry' : 
-                                   industryInfo.relevance === 'secondary' ? 'Related Industry' : 
-                                   'Additional Opportunity'}</span>
-                          </Badge>
-                          <h4 className="font-semibold text-gray-900 capitalize">
-                            {industryInfo.industry}
-                          </h4>
+              <Collapsible open={industryAnalysisOpen} onOpenChange={setIndustryAnalysisOpen}>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="pb-3 cursor-pointer hover:bg-purple-100/30 transition-colors">
+                    <CardTitle className="text-lg text-purple-900 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Target className="h-5 w-5" />
+                        <span>Industry Analysis & ML Opportunities</span>
+                      </div>
+                      {industryAnalysisOpen ? (
+                        <ChevronDown className="h-5 w-5" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5" />
+                      )}
+                    </CardTitle>
+                    <p className="text-sm text-purple-700">
+                      Core industry and related opportunities ranked by relevance
+                    </p>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {analysisResult.relatedIndustries.map((industryInfo: any, index: number) => (
+                        <div key={index} className="bg-white/80 rounded-lg p-4 border border-purple-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <Badge className={`text-xs ${getRelevanceBadgeColor(industryInfo.relevance)} flex items-center space-x-1`}>
+                                {getRelevanceIcon(industryInfo.relevance)}
+                                <span>{industryInfo.relevance === 'primary' ? 'Core Industry' : 
+                                       industryInfo.relevance === 'secondary' ? 'Related Industry' : 
+                                       'Additional Opportunity'}</span>
+                              </Badge>
+                              <h4 className="font-semibold text-gray-900 capitalize">
+                                {industryInfo.industry}
+                              </h4>
+                            </div>
+                          </div>
+                          
+                          <p className="text-sm text-gray-600 mb-3">
+                            {industryInfo.description}
+                          </p>
+                          
+                          <div className="mb-2">
+                            <span className="text-sm font-medium text-gray-700">Key ML Use Cases:</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {industryInfo.useCases.slice(0, 4).map((useCase: string, ucIndex: number) => (
+                              <Badge 
+                                key={ucIndex} 
+                                variant="outline" 
+                                className="text-xs bg-gray-50 text-gray-700 border-gray-200"
+                              >
+                                {useCase}
+                              </Badge>
+                            ))}
+                            {industryInfo.useCases.length > 4 && (
+                              <Badge variant="outline" className="text-xs bg-gray-50 text-gray-500">
+                                +{industryInfo.useCases.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      
-                      <p className="text-sm text-gray-600 mb-3">
-                        {industryInfo.description}
-                      </p>
-                      
-                      <div className="mb-2">
-                        <span className="text-sm font-medium text-gray-700">Key ML Use Cases:</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {industryInfo.useCases.slice(0, 4).map((useCase: string, ucIndex: number) => (
-                          <Badge 
-                            key={ucIndex} 
-                            variant="outline" 
-                            className="text-xs bg-gray-50 text-gray-700 border-gray-200"
-                          >
-                            {useCase}
-                          </Badge>
-                        ))}
-                        {industryInfo.useCases.length > 4 && (
-                          <Badge variant="outline" className="text-xs bg-gray-50 text-gray-500">
-                            +{industryInfo.useCases.length - 4} more
-                          </Badge>
-                        )}
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
             </Card>
           )}
         </>
