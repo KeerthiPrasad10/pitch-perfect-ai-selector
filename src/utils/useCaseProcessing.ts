@@ -1,7 +1,4 @@
 
-import { useCaseData } from "@/data/useCaseData";
-import { isExistingUseCase } from "./useCaseUtils";
-
 // Function to get use case mapping from embedded Excel data
 async function getUseCaseMappingFromRAG(useCaseName: string, openAIApiKey?: string, supabase?: any) {
   if (!openAIApiKey || !supabase) {
@@ -183,58 +180,6 @@ export const processRelatedIndustryUseCases = async (
         };
       })
     )
-  );
-
-  // Sort to put existing use cases first
-  return processedUseCases.sort((a, b) => {
-    if (a.isExisting && !b.isExisting) return -1;
-    if (!a.isExisting && b.isExisting) return 1;
-    return 0;
-  });
-};
-
-export const processStaticUseCases = async (
-  selectedIndustry: string,
-  searchTerm: string,
-  selectedCategory: string,
-  customerName: string,
-  currentUseCases: string[],
-  openAIApiKey?: string,
-  supabase?: any
-) => {
-  const filteredUseCases = useCaseData.filter(useCase => {
-    const matchesIndustry = selectedIndustry && useCase.industries.includes(selectedIndustry);
-    const matchesSearch = !searchTerm || 
-      useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      useCase.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || selectedCategory === "all" || useCase.category === selectedCategory;
-    
-    return matchesIndustry && matchesSearch && matchesCategory;
-  });
-
-  const processedUseCases = await Promise.all(
-    filteredUseCases.map(async (useCase) => {
-      // Get mapping data for this use case
-      const mapping = await getUseCaseMappingFromRAG(useCase.title, openAIApiKey, supabase);
-      
-      return {
-        ...useCase,
-        isFromDocuments: false,
-        ragEnhanced: false,
-        ragSources: [],
-        sources: [],
-        industryRelevance: 'primary',
-        targetCustomer: customerName,
-        implementationJustification: `Implementation complexity assessed from standard ${selectedIndustry} industry practices, typical IT infrastructure, and deployment patterns`,
-        timelineJustification: `Timeline based on typical ${selectedIndustry} industry deployment cycles, regulatory requirements, and change management patterns`,
-        savingsJustification: `Cost savings based on ${selectedIndustry} industry average efficiency gains, labor cost reductions, and operational improvements`,
-        isExisting: isExistingUseCase(useCase.title, currentUseCases),
-        // Add new fields from Excel mapping with fallbacks for static use cases
-        baseVersion: mapping?.baseVersion || 'TBD',
-        releaseVersion: mapping?.releaseVersion || 'TBD',
-        requiredProcess: mapping?.requiredProcess || 'TBD'
-      };
-    })
   );
 
   // Sort to put existing use cases first

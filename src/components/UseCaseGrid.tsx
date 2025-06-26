@@ -1,7 +1,7 @@
 
 import { Briefcase, FileText } from "lucide-react";
 import { UseCaseCard } from "./UseCaseCard";
-import { processDocumentUseCases, processRelatedIndustryUseCases, processStaticUseCases } from "@/utils/useCaseProcessing";
+import { processDocumentUseCases, processRelatedIndustryUseCases } from "@/utils/useCaseProcessing";
 import { useEffect, useState } from "react";
 
 interface UseCaseGridProps {
@@ -62,27 +62,16 @@ export const UseCaseGrid = ({
         return matchesSearch && matchesCategory;
       });
 
-      const filteredStaticUseCases = await processStaticUseCases(
-        selectedIndustry,
-        searchTerm,
-        selectedCategory,
-        customerName || '',
-        currentUseCases,
-        openAIApiKey,
-        supabase
-      );
-
       // Combine all use cases and sort globally to ensure existing cases are always at the top
       const combinedUseCases = [
         ...documentUseCases,
-        ...relatedIndustryUseCases,
-        ...filteredStaticUseCases
+        ...relatedIndustryUseCases
       ].sort((a, b) => {
         // Primary sort: existing use cases first
         if (a.isExisting && !b.isExisting) return -1;
         if (!a.isExisting && b.isExisting) return 1;
         
-        // Secondary sort: maintain source priority (document > related > static)
+        // Secondary sort: maintain source priority (document > related)
         if (a.isFromDocuments && !b.isFromDocuments) return -1;
         if (!a.isFromDocuments && b.isFromDocuments) return 1;
         
