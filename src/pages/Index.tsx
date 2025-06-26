@@ -18,17 +18,18 @@ const Index = () => {
   const [relatedIndustries, setRelatedIndustries] = useState<any[]>([]);
   const [customerAnalysis, setCustomerAnalysis] = useState<any>(null);
 
-  const handleCustomerAnalysis = (analysis: any) => {
+  const handleCustomerAnalysis = (industry: string, customer: string, recommendations: any[], related: any[], analysis?: any) => {
     console.log("Customer analysis received:", analysis);
     setCustomerAnalysis(analysis);
-    setCustomerName(analysis?.customerName || "");
-    setSelectedIndustry(analysis?.industry || "");
-    setRelatedIndustries(analysis?.relatedIndustries || []);
+    setCustomerName(customer);
+    setSelectedIndustry(industry);
+    setRelatedIndustries(related);
+    setAiRecommendations(recommendations);
   };
 
-  const handleDocumentAnalysis = (recommendations: any[]) => {
-    console.log("Document recommendations received:", recommendations);
-    setAiRecommendations(recommendations);
+  const handleDocumentAnalysis = () => {
+    console.log("Document processed");
+    // Refresh the use case grid when new documents are processed
   };
 
   const handleDataProcessed = () => {
@@ -59,7 +60,7 @@ const Index = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <CustomerInput onAnalysisComplete={handleCustomerAnalysis} />
+                <CustomerInput onIndustrySelected={handleCustomerAnalysis} />
               </CardContent>
             </Card>
 
@@ -71,10 +72,7 @@ const Index = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <FileUpload 
-                  onAnalysisComplete={handleDocumentAnalysis}
-                  customerName={customerName}
-                />
+                <FileUpload onFileProcessed={handleDocumentAnalysis} />
               </CardContent>
             </Card>
 
