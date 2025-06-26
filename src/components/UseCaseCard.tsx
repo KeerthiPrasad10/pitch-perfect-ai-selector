@@ -1,9 +1,9 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, CheckCircle, Target, TrendingUp, Briefcase } from "lucide-react";
+import { FileText, CheckCircle, Target, TrendingUp, Briefcase, Settings, Clock } from "lucide-react";
 import { InfoTooltip } from "./InfoTooltip";
-import { getRoiColor, getRelevanceBadgeColor } from "@/utils/useCaseUtils";
+import { getRelevanceBadgeColor } from "@/utils/useCaseUtils";
 
 interface UseCaseCardProps {
   useCase: any;
@@ -18,6 +18,11 @@ export const UseCaseCard = ({ useCase, selectedIndustry }: UseCaseCardProps) => 
       case 'tertiary': return <Briefcase className="h-3 w-3" />;
       default: return <FileText className="h-3 w-3" />;
     }
+  };
+
+  const getVersionBadgeColor = (version: string) => {
+    if (version === 'TBD' || !version) return 'bg-gray-100 text-gray-800';
+    return 'bg-blue-100 text-blue-800';
   };
 
   return (
@@ -75,15 +80,45 @@ export const UseCaseCard = ({ useCase, selectedIndustry }: UseCaseCardProps) => 
           <Badge variant="secondary" className="text-xs">
             {useCase.category.replace('-', ' ')}
           </Badge>
-          <Badge className={`text-xs ${getRoiColor(useCase.roi)} flex items-center`}>
-            ROI: {useCase.roi}%
-            <InfoTooltip content={useCase.roiJustification} />
-          </Badge>
         </div>
       </CardHeader>
       
       <CardContent className="pt-0">
         <div className="space-y-3">
+          {/* IFS Version Information */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="flex items-center space-x-2">
+              <Settings className="h-4 w-4 text-gray-500" />
+              <div className="text-xs">
+                <span className="font-medium text-gray-700">Base Version:</span>
+                <Badge className={`ml-1 text-xs ${getVersionBadgeColor(useCase.baseVersion)}`}>
+                  {useCase.baseVersion || 'TBD'}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-gray-500" />
+              <div className="text-xs">
+                <span className="font-medium text-gray-700">Release:</span>
+                <Badge className={`ml-1 text-xs ${getVersionBadgeColor(useCase.releaseVersion)}`}>
+                  {useCase.releaseVersion || 'TBD'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          {/* Required Process/Core Module */}
+          {useCase.requiredProcess && useCase.requiredProcess !== 'TBD' && (
+            <div className="border-t pt-3">
+              <div className="text-xs text-gray-600 mb-1">
+                <strong>Required Core Module:</strong>
+              </div>
+              <Badge className="text-xs bg-orange-100 text-orange-800">
+                {useCase.requiredProcess}
+              </Badge>
+            </div>
+          )}
+
           {useCase.sources && useCase.sources.length > 0 && (
             <div className="border-t pt-3">
               <div className="text-xs text-gray-600 mb-2">

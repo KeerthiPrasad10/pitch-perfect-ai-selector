@@ -1,11 +1,4 @@
 
-export const getRoiColor = (roi: string) => {
-  const roiValue = parseInt(roi) || 0;
-  if (roiValue >= 200) return "bg-green-100 text-green-800";
-  if (roiValue >= 100) return "bg-yellow-100 text-yellow-800";
-  return "bg-blue-100 text-blue-800";
-};
-
 export const getImplementationColor = (complexity: string) => {
   switch (complexity) {
     case "Low": return "bg-green-100 text-green-800";

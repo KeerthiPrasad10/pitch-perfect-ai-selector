@@ -13,7 +13,7 @@ interface UseCaseGridProps {
   customerAnalysis?: any;
 }
 
-export const UseCaseGrid = ({ 
+export const UseCaseGrid = async ({ 
   selectedIndustry, 
   searchTerm, 
   selectedCategory, 
@@ -25,20 +25,28 @@ export const UseCaseGrid = ({
   // Get current use cases from customer analysis
   const currentUseCases = customerAnalysis?.currentUseCases || [];
 
+  // Get access to OpenAI API and Supabase for RAG queries
+  const openAIApiKey = process.env.OPENAI_API_KEY;
+  const supabase = null; // Will be passed from parent component
+
   // Process different types of use cases (already sorted with existing cases first)
-  const documentUseCases = processDocumentUseCases(
+  const documentUseCases = await processDocumentUseCases(
     aiRecommendations, 
     selectedIndustry, 
     customerName || '', 
-    currentUseCases
+    currentUseCases,
+    openAIApiKey,
+    supabase
   );
 
-  const relatedIndustryUseCases = processRelatedIndustryUseCases(
+  const relatedIndustryUseCases = (await processRelatedIndustryUseCases(
     relatedIndustries, 
     selectedIndustry, 
     customerName || '', 
-    currentUseCases
-  ).filter(useCase => {
+    currentUseCases,
+    openAIApiKey,
+    supabase
+  )).filter(useCase => {
     const matchesSearch = !searchTerm || 
       useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       useCase.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -46,12 +54,14 @@ export const UseCaseGrid = ({
     return matchesSearch && matchesCategory;
   });
 
-  const filteredStaticUseCases = processStaticUseCases(
+  const filteredStaticUseCases = await processStaticUseCases(
     selectedIndustry,
     searchTerm,
     selectedCategory,
     customerName || '',
-    currentUseCases
+    currentUseCases,
+    openAIApiKey,
+    supabase
   );
 
   // Combine all use cases and sort globally to ensure existing cases are always at the top
