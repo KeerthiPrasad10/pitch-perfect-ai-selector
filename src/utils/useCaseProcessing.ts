@@ -229,10 +229,10 @@ export const processStaticUseCases = async (
         timelineJustification: `Timeline based on typical ${selectedIndustry} industry deployment cycles, regulatory requirements, and change management patterns`,
         savingsJustification: `Cost savings based on ${selectedIndustry} industry average efficiency gains, labor cost reductions, and operational improvements`,
         isExisting: isExistingUseCase(useCase.title, currentUseCases),
-        // Add new fields from Excel mapping
-        baseVersion: mapping?.baseVersion || useCase.baseVersion || 'TBD',
-        releaseVersion: mapping?.releaseVersion || useCase.releaseVersion || 'TBD',
-        requiredProcess: mapping?.requiredProcess || useCase.requiredProcess || 'TBD'
+        // Add new fields from Excel mapping with fallbacks for static use cases
+        baseVersion: mapping?.baseVersion || 'TBD',
+        releaseVersion: mapping?.releaseVersion || 'TBD',
+        requiredProcess: mapping?.requiredProcess || 'TBD'
       };
     })
   );

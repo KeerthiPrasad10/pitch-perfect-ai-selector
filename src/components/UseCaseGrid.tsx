@@ -2,6 +2,7 @@
 import { Briefcase, FileText } from "lucide-react";
 import { UseCaseCard } from "./UseCaseCard";
 import { processDocumentUseCases, processRelatedIndustryUseCases, processStaticUseCases } from "@/utils/useCaseProcessing";
+import { useEffect, useState } from "react";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
@@ -13,7 +14,7 @@ interface UseCaseGridProps {
   customerAnalysis?: any;
 }
 
-export const UseCaseGrid = async ({ 
+export const UseCaseGrid = ({ 
   selectedIndustry, 
   searchTerm, 
   selectedCategory, 
@@ -22,70 +23,97 @@ export const UseCaseGrid = async ({
   relatedIndustries = [],
   customerAnalysis
 }: UseCaseGridProps) => {
-  // Get current use cases from customer analysis
-  const currentUseCases = customerAnalysis?.currentUseCases || [];
+  const [allUseCases, setAllUseCases] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get access to OpenAI API and Supabase for RAG queries
-  const openAIApiKey = process.env.OPENAI_API_KEY;
-  const supabase = null; // Will be passed from parent component
+  useEffect(() => {
+    const processUseCases = async () => {
+      setIsLoading(true);
+      
+      // Get current use cases from customer analysis
+      const currentUseCases = customerAnalysis?.currentUseCases || [];
 
-  // Process different types of use cases (already sorted with existing cases first)
-  const documentUseCases = await processDocumentUseCases(
-    aiRecommendations, 
-    selectedIndustry, 
-    customerName || '', 
-    currentUseCases,
-    openAIApiKey,
-    supabase
-  );
+      // Get access to OpenAI API and Supabase for RAG queries
+      const openAIApiKey = process.env.OPENAI_API_KEY;
+      const supabase = null; // Will be passed from parent component
 
-  const relatedIndustryUseCases = (await processRelatedIndustryUseCases(
-    relatedIndustries, 
-    selectedIndustry, 
-    customerName || '', 
-    currentUseCases,
-    openAIApiKey,
-    supabase
-  )).filter(useCase => {
-    const matchesSearch = !searchTerm || 
-      useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      useCase.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || selectedCategory === "all" || useCase.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+      // Process different types of use cases (already sorted with existing cases first)
+      const documentUseCases = await processDocumentUseCases(
+        aiRecommendations, 
+        selectedIndustry, 
+        customerName || '', 
+        currentUseCases,
+        openAIApiKey,
+        supabase
+      );
 
-  const filteredStaticUseCases = await processStaticUseCases(
-    selectedIndustry,
-    searchTerm,
-    selectedCategory,
-    customerName || '',
-    currentUseCases,
-    openAIApiKey,
-    supabase
-  );
+      const relatedIndustryUseCases = (await processRelatedIndustryUseCases(
+        relatedIndustries, 
+        selectedIndustry, 
+        customerName || '', 
+        currentUseCases,
+        openAIApiKey,
+        supabase
+      )).filter(useCase => {
+        const matchesSearch = !searchTerm || 
+          useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          useCase.description.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = !selectedCategory || selectedCategory === "all" || useCase.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+      });
 
-  // Combine all use cases and sort globally to ensure existing cases are always at the top
-  const allUseCases = [
-    ...documentUseCases,
-    ...relatedIndustryUseCases,
-    ...filteredStaticUseCases
-  ].sort((a, b) => {
-    // Primary sort: existing use cases first
-    if (a.isExisting && !b.isExisting) return -1;
-    if (!a.isExisting && b.isExisting) return 1;
-    
-    // Secondary sort: maintain source priority (document > related > static)
-    if (a.isFromDocuments && !b.isFromDocuments) return -1;
-    if (!a.isFromDocuments && b.isFromDocuments) return 1;
-    
-    if (a.industryRelevance && b.industryRelevance && !a.isFromDocuments && !b.isFromDocuments) {
-      const relevanceOrder = { 'primary': 0, 'secondary': 1, 'tertiary': 2 };
-      return (relevanceOrder[a.industryRelevance as keyof typeof relevanceOrder] || 3) - 
-             (relevanceOrder[b.industryRelevance as keyof typeof relevanceOrder] || 3);
-    }
-    
-    return 0;
-  });
+      const filteredStaticUseCases = await processStaticUseCases(
+        selectedIndustry,
+        searchTerm,
+        selectedCategory,
+        customerName || '',
+        currentUseCases,
+        openAIApiKey,
+        supabase
+      );
+
+      // Combine all use cases and sort globally to ensure existing cases are always at the top
+      const combinedUseCases = [
+        ...documentUseCases,
+        ...relatedIndustryUseCases,
+        ...filteredStaticUseCases
+      ].sort((a, b) => {
+        // Primary sort: existing use cases first
+        if (a.isExisting && !b.isExisting) return -1;
+        if (!a.isExisting && b.isExisting) return 1;
+        
+        // Secondary sort: maintain source priority (document > related > static)
+        if (a.isFromDocuments && !b.isFromDocuments) return -1;
+        if (!a.isFromDocuments && b.isFromDocuments) return 1;
+        
+        if (a.industryRelevance && b.industryRelevance && !a.isFromDocuments && !b.isFromDocuments) {
+          const relevanceOrder = { 'primary': 0, 'secondary': 1, 'tertiary': 2 };
+          return (relevanceOrder[a.industryRelevance as keyof typeof relevanceOrder] || 3) - 
+                 (relevanceOrder[b.industryRelevance as keyof typeof relevanceOrder] || 3);
+        }
+        
+        return 0;
+      });
+
+      setAllUseCases(combinedUseCases);
+      setIsLoading(false);
+    };
+
+    processUseCases();
+  }, [selectedIndustry, searchTerm, selectedCategory, aiRecommendations, customerName, relatedIndustries, customerAnalysis]);
+
+  const documentUseCases = allUseCases.filter(uc => uc.isFromDocuments);
+  const relatedIndustryUseCases = allUseCases.filter(uc => uc.industryRelevance && uc.industryRelevance !== 'primary' && !uc.isFromDocuments);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
