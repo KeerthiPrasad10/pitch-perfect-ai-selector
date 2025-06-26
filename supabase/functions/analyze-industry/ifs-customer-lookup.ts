@@ -20,7 +20,7 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
         ifs_version: exactMatch.ifs_version,
         deployment_type: exactMatch.ifs_version, // Cloud or Remote
         release_version: exactMatch.ifs_software_release_version || exactMatch.software_release_version,
-        base_ifs_version: extractBaseVersion(exactMatch.ifs_software_release_version || exactMatch.software_release_version),
+        base_ifs_version: exactMatch.ifs_version, // Cloud or Remote deployment type
         primary_industry: exactMatch.primary_industry || exactMatch.industry // Add primary industry mapping
       };
     }
@@ -43,7 +43,7 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
         ifs_version: match.ifs_version,
         deployment_type: match.ifs_version, // Cloud or Remote
         release_version: match.ifs_software_release_version || match.software_release_version,
-        base_ifs_version: extractBaseVersion(match.ifs_software_release_version || match.software_release_version),
+        base_ifs_version: match.ifs_version, // Cloud or Remote deployment type
         primary_industry: match.primary_industry || match.industry // Add primary industry mapping
       };
     }
@@ -90,7 +90,9 @@ export function checkMLCapabilityAvailability(releaseVersion: string, baseVersio
     return { available: false, status: 'not-available' };
   }
 
-  const currentVersion = parseFloat(baseVersion);
+  // Extract numeric version from release version for comparison
+  const numericVersion = extractBaseVersion(releaseVersion);
+  const currentVersion = parseFloat(numericVersion);
   const requiredVersion = parseFloat(minVersion);
 
   if (currentVersion >= requiredVersion) {
@@ -123,7 +125,7 @@ export async function searchSimilarIFSCompanies(companyName: string, supabase: a
       softwareReleaseVersion: company.ifs_software_release_version || company.software_release_version,
       deploymentType: company.ifs_version, // Cloud or Remote
       releaseVersion: company.ifs_software_release_version || company.software_release_version,
-      baseIfsVersion: extractBaseVersion(company.ifs_software_release_version || company.software_release_version)
+      baseIfsVersion: company.ifs_version // Cloud or Remote deployment type
     })) || [];
   } catch (error) {
     console.log('Error in similar company search:', error);

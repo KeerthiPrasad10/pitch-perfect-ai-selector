@@ -22,23 +22,23 @@ export const processDocumentUseCases = async (
         // Get customer's IFS details for matching
         const customerVersionInfo = customerAnalysis?.companyDetails;
         const primaryIndustry = customerVersionInfo?.primaryIndustry || customerVersionInfo?.industry || selectedIndustry;
-        const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.releaseVersion || '22.1';
+        const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.ifsVersion || 'Cloud'; // Cloud or Remote
         const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || '22.1';
         
-        // Get modules from embedded Excel data with customer-specific matching
+        // Get modules from embedded Excel data with customer-specific matching (including deployment type)
         const recommendedModules = await getRecommendedModules(
           normalizedCategory, 
           supabase, 
           openAIApiKey,
           primaryIndustry,
           releaseVersion,
-          baseVersion
+          baseVersion // Cloud or Remote
         );
         const primaryModule = recommendedModules[0];
         
         // Check version compatibility using embedded data with customer context
         const compatibility = getVersionCompatibility(
-          baseVersion, 
+          baseVersion, // Cloud or Remote
           normalizedCategory, 
           primaryIndustry, 
           releaseVersion
@@ -63,7 +63,7 @@ export const processDocumentUseCases = async (
           timelineJustification: useCase?.timelineJustification || 'Timeline based on project details described in documents',
           savingsJustification: useCase?.savingsJustification || 'Cost information based on data found in documents',
           isExisting: isExistingUseCase(useCase?.title || 'Document Use Case', currentUseCases),
-          baseVersion: baseVersion,
+          baseVersion: baseVersion, // Cloud or Remote
           releaseVersion: releaseVersion,
           primaryIndustry: primaryIndustry,
           requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
@@ -74,7 +74,8 @@ export const processDocumentUseCases = async (
             minVersion: m.minVersion,
             description: m.description,
             industryMatch: !primaryIndustry || !m.primaryIndustry || m.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase()),
-            versionMatch: !releaseVersion || !m.releaseVersion || m.releaseVersion === releaseVersion
+            versionMatch: !releaseVersion || !m.releaseVersion || m.releaseVersion === releaseVersion,
+            deploymentMatch: !baseVersion || !m.baseIfsVersion || m.baseIfsVersion === baseVersion // Cloud or Remote
           }))
         };
       })

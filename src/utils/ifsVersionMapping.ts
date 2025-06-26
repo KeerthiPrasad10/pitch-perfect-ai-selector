@@ -1,6 +1,6 @@
 // IFS Version and Module Mapping Utilities - Using Embedded Excel Data
 export interface IFSVersionInfo {
-  baseVersion: string;
+  baseVersion: string; // Cloud or Remote
   releaseVersion: string;
   deploymentType: 'Cloud' | 'Remote';
   supportedMLCapabilities: string[];
@@ -14,7 +14,7 @@ export interface IFSCoreModule {
   mlCapabilities: string[];
   primaryIndustry?: string;
   releaseVersion?: string;
-  baseIfsVersion?: string;
+  baseIfsVersion?: string; // Cloud or Remote
 }
 
 // Cache for embedded data to avoid repeated API calls
@@ -27,7 +27,7 @@ async function getEmbeddedMappingData(
   openAIApiKey?: string,
   primaryIndustry?: string,
   releaseVersion?: string,
-  baseIfsVersion?: string
+  baseIfsVersion?: string // Cloud or Remote
 ): Promise<any> {
   try {
     if (!openAIApiKey || !supabase) {
@@ -79,7 +79,7 @@ function parseEmbeddedModuleData(
   embeddedData: any[], 
   primaryIndustry?: string,
   releaseVersion?: string,
-  baseIfsVersion?: string
+  baseIfsVersion?: string // Cloud or Remote
 ): Record<string, IFSCoreModule> {
   const modules: Record<string, IFSCoreModule> = {};
   
@@ -87,12 +87,13 @@ function parseEmbeddedModuleData(
   embeddedData.forEach(chunk => {
     const text = chunk.chunk_text.toLowerCase();
     
-    // Check if this chunk is relevant to the customer's industry and version
+    // Check if this chunk is relevant to the customer's industry, version, and deployment type
     const industryMatch = !primaryIndustry || text.includes(primaryIndustry.toLowerCase());
-    const versionMatch = !releaseVersion || text.includes(releaseVersion) || text.includes(baseIfsVersion || '');
+    const versionMatch = !releaseVersion || text.includes(releaseVersion);
+    const deploymentMatch = !baseIfsVersion || text.includes(baseIfsVersion.toLowerCase()); // Cloud or Remote
     
     // Only process if it matches customer criteria
-    if (!industryMatch && !versionMatch && primaryIndustry) {
+    if (!industryMatch && !versionMatch && !deploymentMatch && primaryIndustry) {
       return; // Skip if not relevant to customer
     }
     
@@ -102,11 +103,11 @@ function parseEmbeddedModuleData(
         moduleCode: 'MANUF',
         moduleName: 'Manufacturing',
         description: 'Production planning, scheduling, and shop floor management',
-        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.1',
+        minVersion: extractVersionFromText(text) || '22.1',
         mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'quality-control', 'production-optimization']),
         primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
         releaseVersion: releaseVersion,
-        baseIfsVersion: baseIfsVersion
+        baseIfsVersion: baseIfsVersion // Cloud or Remote
       };
     }
     
@@ -115,11 +116,11 @@ function parseEmbeddedModuleData(
         moduleCode: 'SCM',
         moduleName: 'Supply Chain Management',
         description: 'Procurement, inventory, and logistics management',
-        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.2',
+        minVersion: extractVersionFromText(text) || '22.2',
         mlCapabilities: extractCapabilitiesFromText(text, ['demand-forecasting', 'inventory-optimization', 'supplier-analytics']),
         primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
         releaseVersion: releaseVersion,
-        baseIfsVersion: baseIfsVersion
+        baseIfsVersion: baseIfsVersion // Cloud or Remote
       };
     }
     
@@ -128,11 +129,11 @@ function parseEmbeddedModuleData(
         moduleCode: 'CRM',
         moduleName: 'Customer Relationship Management',
         description: 'Sales, marketing, and customer service',
-        minVersion: extractVersionFromText(text) || baseIfsVersion || '23.1',
+        minVersion: extractVersionFromText(text) || '23.1',
         mlCapabilities: extractCapabilitiesFromText(text, ['customer-analytics', 'sentiment-analysis', 'lead-scoring']),
         primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
         releaseVersion: releaseVersion,
-        baseIfsVersion: baseIfsVersion
+        baseIfsVersion: baseIfsVersion // Cloud or Remote
       };
     }
     
@@ -141,11 +142,11 @@ function parseEmbeddedModuleData(
         moduleCode: 'EAM',
         moduleName: 'Enterprise Asset Management',
         description: 'Asset lifecycle and maintenance management',
-        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.1',
+        minVersion: extractVersionFromText(text) || '22.1',
         mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'anomaly-detection', 'asset-optimization']),
         primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
         releaseVersion: releaseVersion,
-        baseIfsVersion: baseIfsVersion
+        baseIfsVersion: baseIfsVersion // Cloud or Remote
       };
     }
     
@@ -154,11 +155,11 @@ function parseEmbeddedModuleData(
         moduleCode: 'FINANCE',
         moduleName: 'Financial Management',
         description: 'Accounting, budgeting, and financial reporting',
-        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.2',
+        minVersion: extractVersionFromText(text) || '22.2',
         mlCapabilities: extractCapabilitiesFromText(text, ['fraud-detection', 'financial-forecasting', 'automated-classification']),
         primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
         releaseVersion: releaseVersion,
-        baseIfsVersion: baseIfsVersion
+        baseIfsVersion: baseIfsVersion // Cloud or Remote
       };
     }
     
@@ -167,11 +168,11 @@ function parseEmbeddedModuleData(
         moduleCode: 'HCM',
         moduleName: 'Human Capital Management',
         description: 'HR processes and workforce management',
-        minVersion: extractVersionFromText(text) || baseIfsVersion || '23.1',
+        minVersion: extractVersionFromText(text) || '23.1',
         mlCapabilities: extractCapabilitiesFromText(text, ['employee-analytics', 'recruitment-optimization', 'performance-prediction']),
         primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
         releaseVersion: releaseVersion,
-        baseIfsVersion: baseIfsVersion
+        baseIfsVersion: baseIfsVersion // Cloud or Remote
       };
     }
     
@@ -180,11 +181,11 @@ function parseEmbeddedModuleData(
         moduleCode: 'PROJECT',
         moduleName: 'Project Management',
         description: 'Project planning, execution, and portfolio management',
-        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.2',
+        minVersion: extractVersionFromText(text) || '22.2',
         mlCapabilities: extractCapabilitiesFromText(text, ['project-risk-analysis', 'resource-optimization', 'timeline-prediction']),
         primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
         releaseVersion: releaseVersion,
-        baseIfsVersion: baseIfsVersion
+        baseIfsVersion: baseIfsVersion // Cloud or Remote
       };
     }
   });
@@ -228,7 +229,7 @@ export async function getRecommendedModules(
   openAIApiKey?: string,
   primaryIndustry?: string,
   releaseVersion?: string,
-  baseIfsVersion?: string
+  baseIfsVersion?: string // Cloud or Remote
 ): Promise<IFSCoreModule[]> {
   try {
     // Try to get data from embedded Excel sheet with customer-specific criteria
@@ -250,9 +251,10 @@ export async function getRecommendedModules(
       Object.values(cachedModules).forEach(module => {
         const industryMatch = !primaryIndustry || !module.primaryIndustry || module.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase());
         const versionMatch = !releaseVersion || !module.releaseVersion || module.releaseVersion === releaseVersion;
+        const deploymentMatch = !baseIfsVersion || !module.baseIfsVersion || module.baseIfsVersion === baseIfsVersion; // Cloud or Remote
         const capabilityMatch = module.mlCapabilities.includes(useCaseCategory);
         
-        if ((industryMatch || versionMatch) && capabilityMatch) {
+        if ((industryMatch || versionMatch || deploymentMatch) && capabilityMatch) {
           relevantModules.push(module);
         }
       });
@@ -305,7 +307,7 @@ export function isMLCapabilitySupported(moduleCode: string, capability: string):
 
 // Get version compatibility with customer-specific details
 export function getVersionCompatibility(
-  baseVersion: string, 
+  baseVersion: string, // Cloud or Remote
   capability: string,
   primaryIndustry?: string,
   releaseVersion?: string
@@ -314,17 +316,21 @@ export function getVersionCompatibility(
   requiredVersion?: string;
   upgradeNeeded: boolean;
   industrySupported?: boolean;
+  deploymentSupported?: boolean;
 } {
   try {
-    const currentVersion = parseFloat(baseVersion);
+    // Extract numeric version from release version for capability check
+    const numericVersion = releaseVersion ? parseFloat(releaseVersion.match(/^(\d+\.\d+)/)?.[1] || '22.1') : 22.1;
     
-    // Check embedded data for version requirements with industry context
+    // Check embedded data for version requirements with industry and deployment context
     if (Object.keys(cachedModules).length > 0) {
       const relevantModules = Object.values(cachedModules).filter(module => {
         const capabilityMatch = module.mlCapabilities.includes(capability);
         const industryMatch = !primaryIndustry || !module.primaryIndustry || 
           module.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase());
-        return capabilityMatch && industryMatch;
+        const deploymentMatch = !baseVersion || !module.baseIfsVersion || 
+          module.baseIfsVersion.toLowerCase() === baseVersion.toLowerCase(); // Cloud or Remote
+        return capabilityMatch && (industryMatch || deploymentMatch);
       });
       
       if (relevantModules.length > 0) {
@@ -334,12 +340,17 @@ export function getVersionCompatibility(
           !primaryIndustry || !m.primaryIndustry || 
           m.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase())
         );
+        const deploymentSupported = relevantModules.some(m => 
+          !baseVersion || !m.baseIfsVersion || 
+          m.baseIfsVersion.toLowerCase() === baseVersion.toLowerCase()
+        );
         
         return {
-          compatible: currentVersion >= minRequiredVersion,
+          compatible: numericVersion >= minRequiredVersion,
           requiredVersion: minRequiredVersion.toString(),
-          upgradeNeeded: currentVersion < minRequiredVersion,
-          industrySupported
+          upgradeNeeded: numericVersion < minRequiredVersion,
+          industrySupported,
+          deploymentSupported
         };
       }
     }
@@ -347,12 +358,13 @@ export function getVersionCompatibility(
     // Fallback version check
     const minVersion = 22.1;
     return {
-      compatible: currentVersion >= minVersion,
+      compatible: numericVersion >= minVersion,
       requiredVersion: minVersion.toString(),
-      upgradeNeeded: currentVersion < minVersion
+      upgradeNeeded: numericVersion < minVersion,
+      deploymentSupported: true // Assume both Cloud and Remote support basic capabilities
     };
   } catch (error) {
-    return { compatible: false, upgradeNeeded: false, industrySupported: false };
+    return { compatible: false, upgradeNeeded: false, industrySupported: false, deploymentSupported: false };
   }
 }
 

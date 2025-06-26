@@ -41,7 +41,7 @@ export const UseCaseGrid = ({
       // Get customer's IFS details for matching
       const customerVersionInfo = customerAnalysis?.companyDetails;
       const primaryIndustry = customerVersionInfo?.primaryIndustry || customerVersionInfo?.industry || selectedIndustry;
-      const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.releaseVersion || '22.1';
+      const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.ifsVersion || 'Cloud'; // Cloud or Remote
       const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || '22.1';
 
       // Only process factual use cases from documents (no AI generation)
@@ -60,21 +60,21 @@ export const UseCaseGrid = ({
         currentUseCases.map(async (useCase: string, index: number) => {
           const normalizedCategory = normalizeUseCaseCategory('existing');
           
-          // Get modules from embedded Excel data with customer-specific matching
+          // Get modules from embedded Excel data with customer-specific matching (including deployment type)
           const recommendedModules = await getRecommendedModules(
             normalizedCategory, 
             supabase, 
             openAIApiKey,
             primaryIndustry,
             releaseVersion,
-            baseVersion
+            baseVersion // Cloud or Remote
           );
           const primaryModule = recommendedModules[0];
           
           return {
             id: `existing-${index}`,
             title: useCase,
-            description: `Active AI/ML solution currently implemented by ${customerName}. This use case is operational and generating business value in the ${primaryIndustry} industry.`,
+            description: `Active AI/ML solution currently implemented by ${customerName}. This use case is operational and generating business value in the ${primaryIndustry} industry on ${baseVersion} deployment.`,
             category: 'existing',
             implementation: 'Active Implementation',
             timeline: 'Currently Active',
@@ -90,7 +90,7 @@ export const UseCaseGrid = ({
             timelineJustification: 'Live production system with ongoing benefits',
             savingsJustification: 'Measurable business value being generated from active implementation',
             isExisting: true,
-            baseVersion: baseVersion,
+            baseVersion: baseVersion, // Cloud or Remote
             releaseVersion: releaseVersion,
             primaryIndustry: primaryIndustry,
             requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
@@ -102,7 +102,8 @@ export const UseCaseGrid = ({
               minVersion: m.minVersion,
               description: m.description,
               industryMatch: !primaryIndustry || !m.primaryIndustry || m.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase()),
-              versionMatch: !releaseVersion || !m.releaseVersion || m.releaseVersion === releaseVersion
+              versionMatch: !releaseVersion || !m.releaseVersion || m.releaseVersion === releaseVersion,
+              deploymentMatch: !baseVersion || !m.baseIfsVersion || m.baseIfsVersion === baseVersion // Cloud or Remote
             }))
           };
         })
@@ -172,7 +173,7 @@ export const UseCaseGrid = ({
           <p className="text-gray-600">
             No ML use cases found that match the combination of {primaryIndustry} industry, 
             {customerVersionInfo?.releaseVersion || 'unknown'} release version, and 
-            {customerVersionInfo?.baseIfsVersion || 'unknown'} base IFS version.
+            {customerVersionInfo?.baseIfsVersion || 'unknown'} deployment type.
           </p>
         </div>
       )}
