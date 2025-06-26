@@ -1,3 +1,4 @@
+
 // IFS Version and Module Mapping Utilities - Using Embedded Excel Data
 export interface IFSVersionInfo {
   baseVersion: string; // Cloud or Remote
@@ -264,75 +265,12 @@ export async function getRecommendedModules(
       }
     }
     
-    // Fallback to basic mapping if no embedded data found
-    const fallbackMapping: Record<string, string[]> = {
-      'predictive-maintenance': ['IC10400', 'IC10100'],
-      'quality-control': ['IC10100'],
-      'demand-forecasting': ['IC10200'],
-      'inventory-optimization': ['IC10200'],
-      'customer-analytics': ['IC10300'],
-      'sentiment-analysis': ['IC10300'],
-      'fraud-detection': ['IC10500'],
-      'anomaly-detection': ['IC10400', 'IC10100'],
-      'automated-classification': ['IC10500', 'IC10200'],
-      'production-optimization': ['IC10100'],
-      'financial-forecasting': ['IC10500'],
-      'employee-analytics': ['IC10600'],
-      'project-risk-analysis': ['IC10700'],
-      'asset-optimization': ['IC10400'],
-      'maintenance': ['IC10400', 'IC10100'],
-      'forecasting': ['IC10200'],
-      'quality': ['IC10100'],
-      'inventory': ['IC10200'],
-      'customer': ['IC10300'],
-      'finance': ['IC10500'],
-      'fraud': ['IC10500'],
-      'analytics': ['IC10300'],
-      'optimization': ['IC10200'],
-      'classification': ['IC10500', 'IC10200'],
-      'existing': ['IC10000'],
-      'general': ['IC10000']
-    };
-    
-    const moduleKeys = fallbackMapping[useCaseCategory] || ['IC10000'];
-    const fallbackModules = moduleKeys.map(key => {
-      const moduleNames: Record<string, string> = {
-        'IC10000': 'IFS Cloud Platform',
-        'IC10100': 'IFS Manufacturing Platform',
-        'IC10200': 'IFS Supply Chain Management Platform',
-        'IC10300': 'IFS Customer Relationship Management Platform',
-        'IC10400': 'IFS Enterprise Asset Management Platform',
-        'IC10500': 'IFS Financial Management Platform',
-        'IC10600': 'IFS Human Capital Management Platform',
-        'IC10700': 'IFS Project Management Platform'
-      };
-      
-      return {
-        moduleCode: key,
-        moduleName: moduleNames[key] || 'IFS Cloud Platform',
-        description: `${moduleNames[key]} module`,
-        minVersion: '22.1',
-        mlCapabilities: [useCaseCategory],
-        primaryIndustry: primaryIndustry,
-        releaseVersion: releaseVersion,
-        baseIfsVersion: baseIfsVersion
-      };
-    });
-    
-    return fallbackModules;
+    // No fallback mapping - return empty array if no embedded data found
+    console.log(`No module data found for use case category: ${useCaseCategory}`);
+    return [];
   } catch (error) {
     console.log('Error getting recommended modules:', error);
-    // Return default IFS Cloud Platform
-    return [{
-      moduleCode: 'IC10000',
-      moduleName: 'IFS Cloud Platform',
-      description: 'Core IFS Cloud Platform',
-      minVersion: '22.1',
-      mlCapabilities: [useCaseCategory],
-      primaryIndustry: primaryIndustry,
-      releaseVersion: releaseVersion,
-      baseIfsVersion: baseIfsVersion
-    }];
+    return [];
   }
 }
 
@@ -392,13 +330,13 @@ export function getVersionCompatibility(
       }
     }
     
-    // Fallback version check
-    const minVersion = 22.1;
+    // No fallback version check - return not compatible if no embedded data
+    console.log(`No version compatibility data found for capability: ${capability}`);
     return {
-      compatible: numericVersion >= minVersion,
-      requiredVersion: minVersion.toString(),
-      upgradeNeeded: numericVersion < minVersion,
-      deploymentSupported: true // Assume both Cloud and Remote support basic capabilities
+      compatible: false,
+      upgradeNeeded: false,
+      industrySupported: false,
+      deploymentSupported: false
     };
   } catch (error) {
     return { compatible: false, upgradeNeeded: false, industrySupported: false, deploymentSupported: false };
