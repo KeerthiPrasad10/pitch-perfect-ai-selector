@@ -1,7 +1,7 @@
 
 import type { DocumentUseCase } from './types.ts';
 
-// Search for ML use cases in uploaded documents using RAG
+// Search for ML use cases in uploaded documents using RAG - FACTUAL DATA ONLY
 export async function searchDocumentUseCases(
   query: string, 
   customerName: string, 
@@ -10,7 +10,7 @@ export async function searchDocumentUseCases(
   supabase?: any
 ): Promise<DocumentUseCase[]> {
   try {
-    console.log('Searching documents for use cases...');
+    console.log('Searching documents for factual use cases...');
     
     if (!openAIApiKey) {
       console.log('OpenAI API key not available for embeddings');
@@ -30,7 +30,7 @@ export async function searchDocumentUseCases(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        input: `${customerName} ${industry} AI ML use cases solutions recommendations`,
+        input: `${customerName} ${industry} AI ML use cases solutions implementations`,
         model: 'text-embedding-ada-002',
       }),
     });
@@ -62,36 +62,39 @@ export async function searchDocumentUseCases(
 
     console.log(`Found ${searchResults.length} relevant document chunks`);
 
-    // Use OpenAI to extract use cases from the found documents
+    // Use OpenAI to extract ONLY FACTUAL use cases from the found documents
     const documentsText = searchResults.map(result => result.chunk_text).join('\n\n');
     
-    const extractionPrompt = `Based on the following document excerpts, extract specific AI/ML use cases that would be relevant for a ${industry} company like ${customerName}. 
+    const extractionPrompt = `From the following document excerpts, extract ONLY the FACTUAL AI/ML use cases that are explicitly mentioned or documented. Do NOT generate, suggest, or infer any use cases.
 
 Document content:
 ${documentsText}
 
-Please extract and format ONLY the use cases mentioned in these documents. For each use case, provide detailed justifications for your estimates based on the document content. Return as a JSON array with this structure:
+IMPORTANT INSTRUCTIONS:
+- Extract ONLY use cases that are explicitly mentioned in the documents
+- Do NOT generate or suggest any new use cases
+- Do NOT make assumptions or inferences
+- If no explicit use cases are found, return an empty array
+- Only include use cases with clear factual basis in the provided text
+
+Return as a JSON array with this structure (or empty array [] if no factual use cases found):
 [
   {
-    "title": "Use Case Title",
-    "description": "Detailed description from the documents",
-    "category": "category_name",
-    "roi": "estimated_roi_percentage",
-    "implementation": "Low|Medium|High",
-    "timeline": "time_estimate",
+    "title": "Exact title from document",
+    "description": "Exact description from document",
+    "category": "category if mentioned, otherwise 'documented'",
+    "roi": "ROI if explicitly stated, otherwise 'TBD'",
+    "implementation": "Implementation status if mentioned, otherwise 'TBD'",
+    "timeline": "Timeline if mentioned, otherwise 'TBD'",
     "source": "document_source",
-    "roiJustification": "Explanation of why this ROI was estimated based on document content",
-    "implementationJustification": "Explanation of complexity assessment based on technical details in documents", 
-    "timelineJustification": "Explanation of timeline estimate based on project details mentioned in documents",
-    "savingsJustification": "Explanation of cost savings estimate based on efficiency improvements described in documents"
+    "roiJustification": "Quote the exact text that mentions ROI/benefits",
+    "implementationJustification": "Quote the exact text about implementation", 
+    "timelineJustification": "Quote the exact text about timeline",
+    "savingsJustification": "Quote the exact text about cost savings"
   }
 ]
 
-IMPORTANT: 
-- Only extract use cases that are explicitly mentioned in the provided documents
-- Base all estimates (ROI, implementation, timeline, savings) on specific facts from the documents
-- Provide clear justifications referencing document content
-- If documents don't contain enough detail for estimates, mention this in justifications`;
+REMEMBER: Only extract what is explicitly documented. Do not generate anything new.`;
 
     const extractionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -104,11 +107,11 @@ IMPORTANT:
         messages: [
           { 
             role: 'system', 
-            content: 'You are an expert at extracting AI/ML use cases from technical documents. Only extract information that is explicitly mentioned in the provided text and provide detailed justifications for all estimates.' 
+            content: 'You are a document analyst that extracts ONLY factual information explicitly mentioned in provided text. You never generate, suggest, or infer anything beyond what is clearly documented.' 
           },
           { role: 'user', content: extractionPrompt }
         ],
-        temperature: 0.1,
+        temperature: 0,
       }),
     });
 
@@ -127,7 +130,7 @@ IMPORTANT:
 
     try {
       const useCases = JSON.parse(extractedUseCases);
-      console.log(`Extracted ${useCases.length} use cases from documents`);
+      console.log(`Extracted ${useCases.length} factual use cases from documents`);
       
       // Add source information from search results
       return useCases.map((useCase: any, index: number) => ({
@@ -148,7 +151,7 @@ IMPORTANT:
   }
 }
 
-// Get document insights for industry relationship analysis
+// Get document insights for industry relationship analysis - FACTUAL ONLY
 export async function getDocumentInsights(
   customerName: string,
   openAIApiKey?: string,
@@ -190,7 +193,7 @@ export async function getDocumentInsights(
       return [];
     }
 
-    // Extract key insights about the company's business
+    // Return factual excerpts from documents
     return searchResults.map(result => 
       `${result.file_name}: ${result.chunk_text.substring(0, 200)}...`
     );
