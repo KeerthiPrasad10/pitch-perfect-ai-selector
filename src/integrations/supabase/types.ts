@@ -81,48 +81,6 @@ export type Database = {
         }
         Relationships: []
       }
-      ifs_module_mappings: {
-        Row: {
-          base_ifs_version: string | null
-          created_at: string
-          description: string | null
-          id: string
-          min_version: string | null
-          ml_capabilities: string[] | null
-          module_code: string
-          module_name: string
-          primary_industry: string | null
-          release_version: string | null
-          updated_at: string
-        }
-        Insert: {
-          base_ifs_version?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          min_version?: string | null
-          ml_capabilities?: string[] | null
-          module_code: string
-          module_name: string
-          primary_industry?: string | null
-          release_version?: string | null
-          updated_at?: string
-        }
-        Update: {
-          base_ifs_version?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          min_version?: string | null
-          ml_capabilities?: string[] | null
-          module_code?: string
-          module_name?: string
-          primary_industry?: string | null
-          release_version?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never

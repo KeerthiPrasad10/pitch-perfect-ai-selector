@@ -1,60 +1,70 @@
 
 // IFS Module Service for Recommendations and Capabilities
 import type { IFSCoreModule } from './types';
-import { getModulesFromDatabase } from './directDataService';
+import { 
+  getEmbeddedMappingData, 
+  parseEmbeddedModuleData, 
+  getCachedModules, 
+  setCachedModules, 
+  getCachedEmbeddedData, 
+  setCachedEmbeddedData 
+} from './embeddedDataService';
 
 // Get recommended IFS modules for a use case with customer-specific matching
 export async function getRecommendedModules(
   useCaseCategory: string, 
-  supabaseClient?: any, 
+  supabase?: any, 
   openAIApiKey?: string,
   primaryIndustry?: string,
   releaseVersion?: string,
   baseIfsVersion?: string // Cloud or Remote
 ): Promise<IFSCoreModule[]> {
   try {
-    // Use direct database query instead of embeddings
-    console.log(`Getting modules for: ${useCaseCategory}, Industry: ${primaryIndustry}, Version: ${releaseVersion}, Base: ${baseIfsVersion}`);
+    // Try to get data from embedded Excel sheet with customer-specific criteria
+    const cacheKey = `${primaryIndustry}-${releaseVersion}-${baseIfsVersion}`;
     
-    const modules = await getModulesFromDatabase(
-      useCaseCategory,
-      primaryIndustry,
-      releaseVersion,
-      baseIfsVersion
-    );
-
-    if (modules.length > 0) {
-      console.log(`Found ${modules.length} modules from database for ${useCaseCategory}`);
-      return modules;
+    if (supabase && openAIApiKey && (!getCachedEmbeddedData() || !getCachedEmbeddedData()[cacheKey])) {
+      const embeddedData = await getEmbeddedMappingData(supabase, openAIApiKey, primaryIndustry, releaseVersion, baseIfsVersion);
+      if (embeddedData) {
+        setCachedEmbeddedData({ [cacheKey]: embeddedData });
+        setCachedModules(parseEmbeddedModuleData(embeddedData, primaryIndustry, releaseVersion, baseIfsVersion));
+      }
     }
-
-    // Try broader search if no exact matches
-    const broaderModules = await getModulesFromDatabase(useCaseCategory);
-    console.log(`Broader search found ${broaderModules.length} modules for ${useCaseCategory}`);
     
-    return broaderModules;
+    // Use embedded data if available and matches customer criteria
+    const cachedModules = getCachedModules();
+    if (Object.keys(cachedModules).length > 0) {
+      const relevantModules: IFSCoreModule[] = [];
+      
+      // Filter modules based on customer criteria and use case category
+      Object.values(cachedModules).forEach(module => {
+        const industryMatch = !primaryIndustry || !module.primaryIndustry || module.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase());
+        const versionMatch = !releaseVersion || !module.releaseVersion || module.releaseVersion === releaseVersion;
+        const deploymentMatch = !baseIfsVersion || !module.baseIfsVersion || module.baseIfsVersion === baseIfsVersion; // Cloud or Remote
+        const capabilityMatch = module.mlCapabilities.includes(useCaseCategory);
+        
+        if ((industryMatch || versionMatch || deploymentMatch) && capabilityMatch) {
+          relevantModules.push(module);
+        }
+      });
+      
+      if (relevantModules.length > 0) {
+        return relevantModules;
+      }
+    }
+    
+    // No fallback mapping - return empty array if no embedded data found
+    console.log(`No module data found for use case category: ${useCaseCategory}`);
+    return [];
   } catch (error) {
     console.log('Error getting recommended modules:', error);
     return [];
   }
 }
 
-// Check if a module supports a specific ML capability using direct database query
-export async function isMLCapabilitySupported(moduleCode: string, capability: string, supabaseClient: any): Promise<boolean> {
-  try {
-    const { data, error } = await supabaseClient
-      .from('ifs_module_mappings')
-      .select('ml_capabilities')
-      .eq('module_code', moduleCode)
-      .single();
-
-    if (error || !data) {
-      return false;
-    }
-
-    return data.ml_capabilities?.includes(capability) || false;
-  } catch (error) {
-    console.error('Error checking ML capability support:', error);
-    return false;
-  }
+// Check if a module supports a specific ML capability using embedded data
+export function isMLCapabilitySupported(moduleCode: string, capability: string): boolean {
+  const cachedModules = getCachedModules();
+  const module = cachedModules[moduleCode];
+  return module ? module.mlCapabilities.includes(capability) : false;
 }
