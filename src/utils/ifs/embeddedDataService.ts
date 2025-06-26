@@ -1,29 +1,13 @@
 
-// IFS Version and Module Mapping Utilities - Using Embedded Excel Data
-export interface IFSVersionInfo {
-  baseVersion: string; // Cloud or Remote
-  releaseVersion: string;
-  deploymentType: 'Cloud' | 'Remote';
-  supportedMLCapabilities: string[];
-}
-
-export interface IFSCoreModule {
-  moduleCode: string;
-  moduleName: string;
-  description: string;
-  minVersion: string;
-  mlCapabilities: string[];
-  primaryIndustry?: string;
-  releaseVersion?: string;
-  baseIfsVersion?: string; // Cloud or Remote
-}
+// Embedded Excel Data Service for IFS Mapping
+import type { IFSCoreModule } from './types';
 
 // Cache for embedded data to avoid repeated API calls
 let cachedEmbeddedData: any = null;
 let cachedModules: Record<string, IFSCoreModule> = {};
 
 // Get IFS module and version data from embedded Excel sheet with industry matching
-async function getEmbeddedMappingData(
+export async function getEmbeddedMappingData(
   supabase: any, 
   openAIApiKey?: string,
   primaryIndustry?: string,
@@ -76,7 +60,7 @@ async function getEmbeddedMappingData(
 }
 
 // Parse embedded Excel data to extract IFS module information with customer-specific matching
-function parseEmbeddedModuleData(
+export function parseEmbeddedModuleData(
   embeddedData: any[], 
   primaryIndustry?: string,
   releaseVersion?: string,
@@ -223,144 +207,19 @@ function extractCapabilitiesFromText(text: string, possibleCapabilities: string[
   return capabilities;
 }
 
-// Get recommended IFS modules for a use case with customer-specific matching
-export async function getRecommendedModules(
-  useCaseCategory: string, 
-  supabase?: any, 
-  openAIApiKey?: string,
-  primaryIndustry?: string,
-  releaseVersion?: string,
-  baseIfsVersion?: string // Cloud or Remote
-): Promise<IFSCoreModule[]> {
-  try {
-    // Try to get data from embedded Excel sheet with customer-specific criteria
-    const cacheKey = `${primaryIndustry}-${releaseVersion}-${baseIfsVersion}`;
-    
-    if (supabase && openAIApiKey && (!cachedEmbeddedData || !cachedEmbeddedData[cacheKey])) {
-      const embeddedData = await getEmbeddedMappingData(supabase, openAIApiKey, primaryIndustry, releaseVersion, baseIfsVersion);
-      if (embeddedData) {
-        cachedEmbeddedData = { [cacheKey]: embeddedData };
-        cachedModules = parseEmbeddedModuleData(embeddedData, primaryIndustry, releaseVersion, baseIfsVersion);
-      }
-    }
-    
-    // Use embedded data if available and matches customer criteria
-    if (Object.keys(cachedModules).length > 0) {
-      const relevantModules: IFSCoreModule[] = [];
-      
-      // Filter modules based on customer criteria and use case category
-      Object.values(cachedModules).forEach(module => {
-        const industryMatch = !primaryIndustry || !module.primaryIndustry || module.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase());
-        const versionMatch = !releaseVersion || !module.releaseVersion || module.releaseVersion === releaseVersion;
-        const deploymentMatch = !baseIfsVersion || !module.baseIfsVersion || module.baseIfsVersion === baseIfsVersion; // Cloud or Remote
-        const capabilityMatch = module.mlCapabilities.includes(useCaseCategory);
-        
-        if ((industryMatch || versionMatch || deploymentMatch) && capabilityMatch) {
-          relevantModules.push(module);
-        }
-      });
-      
-      if (relevantModules.length > 0) {
-        return relevantModules;
-      }
-    }
-    
-    // No fallback mapping - return empty array if no embedded data found
-    console.log(`No module data found for use case category: ${useCaseCategory}`);
-    return [];
-  } catch (error) {
-    console.log('Error getting recommended modules:', error);
-    return [];
-  }
+// Export cache for use in other modules
+export function getCachedModules(): Record<string, IFSCoreModule> {
+  return cachedModules;
 }
 
-// Check if a module supports a specific ML capability using embedded data
-export function isMLCapabilitySupported(moduleCode: string, capability: string): boolean {
-  const module = cachedModules[moduleCode];
-  return module ? module.mlCapabilities.includes(capability) : false;
+export function setCachedModules(modules: Record<string, IFSCoreModule>): void {
+  cachedModules = modules;
 }
 
-// Get version compatibility with customer-specific details
-export function getVersionCompatibility(
-  baseVersion: string, // Cloud or Remote
-  capability: string,
-  primaryIndustry?: string,
-  releaseVersion?: string
-): {
-  compatible: boolean;
-  requiredVersion?: string;
-  upgradeNeeded: boolean;
-  industrySupported?: boolean;
-  deploymentSupported?: boolean;
-} {
-  try {
-    // Extract numeric version from release version for capability check
-    const numericVersion = releaseVersion ? parseFloat(releaseVersion.match(/^(\d+\.\d+)/)?.[1] || '22.1') : 22.1;
-    
-    // Check embedded data for version requirements with industry and deployment context
-    if (Object.keys(cachedModules).length > 0) {
-      const relevantModules = Object.values(cachedModules).filter(module => {
-        const capabilityMatch = module.mlCapabilities.includes(capability);
-        const industryMatch = !primaryIndustry || !module.primaryIndustry || 
-          module.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase());
-        const deploymentMatch = !baseVersion || !module.baseIfsVersion || 
-          module.baseIfsVersion.toLowerCase() === baseVersion.toLowerCase(); // Cloud or Remote
-        return capabilityMatch && (industryMatch || deploymentMatch);
-      });
-      
-      if (relevantModules.length > 0) {
-        const requiredVersions = relevantModules.map(m => parseFloat(m.minVersion));
-        const minRequiredVersion = Math.min(...requiredVersions);
-        const industrySupported = relevantModules.some(m => 
-          !primaryIndustry || !m.primaryIndustry || 
-          m.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase())
-        );
-        const deploymentSupported = relevantModules.some(m => 
-          !baseVersion || !m.baseIfsVersion || 
-          m.baseIfsVersion.toLowerCase() === baseVersion.toLowerCase()
-        );
-        
-        return {
-          compatible: numericVersion >= minRequiredVersion,
-          requiredVersion: minRequiredVersion.toString(),
-          upgradeNeeded: numericVersion < minRequiredVersion,
-          industrySupported,
-          deploymentSupported
-        };
-      }
-    }
-    
-    // No fallback version check - return not compatible if no embedded data
-    console.log(`No version compatibility data found for capability: ${capability}`);
-    return {
-      compatible: false,
-      upgradeNeeded: false,
-      industrySupported: false,
-      deploymentSupported: false
-    };
-  } catch (error) {
-    return { compatible: false, upgradeNeeded: false, industrySupported: false, deploymentSupported: false };
-  }
+export function getCachedEmbeddedData(): any {
+  return cachedEmbeddedData;
 }
 
-// Normalize use case categories to match embedded data
-export function normalizeUseCaseCategory(category: string): string {
-  const categoryMap: Record<string, string> = {
-    'maintenance': 'predictive-maintenance',
-    'forecasting': 'demand-forecasting',
-    'quality': 'quality-control',
-    'inventory': 'inventory-optimization',
-    'customer': 'customer-analytics',
-    'finance': 'financial-forecasting',
-    'fraud': 'fraud-detection',
-    'analytics': 'customer-analytics',
-    'optimization': 'inventory-optimization',
-    'supply chain optimization': 'inventory-optimization',
-    'supply-chain-optimization': 'inventory-optimization',
-    'classification': 'automated-classification',
-    'existing': 'existing',
-    'general': 'general'
-  };
-
-  return categoryMap[category.toLowerCase()] || category.toLowerCase();
+export function setCachedEmbeddedData(data: any): void {
+  cachedEmbeddedData = data;
 }
