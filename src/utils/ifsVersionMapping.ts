@@ -266,7 +266,7 @@ export async function getRecommendedModules(
     
     // Fallback to basic mapping if no embedded data found
     const fallbackMapping: Record<string, string[]> = {
-      'predictive-maintenance': ['IC10100', 'IC10400'],
+      'predictive-maintenance': ['IC10400', 'IC10100'],
       'quality-control': ['IC10100'],
       'demand-forecasting': ['IC10200'],
       'inventory-optimization': ['IC10200'],
@@ -275,12 +275,23 @@ export async function getRecommendedModules(
       'fraud-detection': ['IC10500'],
       'anomaly-detection': ['IC10400', 'IC10100'],
       'automated-classification': ['IC10500', 'IC10200'],
-      'supply-chain-optimization': ['IC10200'],
       'production-optimization': ['IC10100'],
       'financial-forecasting': ['IC10500'],
       'employee-analytics': ['IC10600'],
       'project-risk-analysis': ['IC10700'],
-      'asset-optimization': ['IC10400']
+      'asset-optimization': ['IC10400'],
+      'maintenance': ['IC10400', 'IC10100'],
+      'forecasting': ['IC10200'],
+      'quality': ['IC10100'],
+      'inventory': ['IC10200'],
+      'customer': ['IC10300'],
+      'finance': ['IC10500'],
+      'fraud': ['IC10500'],
+      'analytics': ['IC10300'],
+      'optimization': ['IC10200'],
+      'classification': ['IC10500', 'IC10200'],
+      'existing': ['IC10000'],
+      'general': ['IC10000']
     };
     
     const moduleKeys = fallbackMapping[useCaseCategory] || ['IC10000'];
@@ -301,7 +312,10 @@ export async function getRecommendedModules(
         moduleName: moduleNames[key] || 'IFS Cloud Platform',
         description: `${moduleNames[key]} module`,
         minVersion: '22.1',
-        mlCapabilities: [useCaseCategory]
+        mlCapabilities: [useCaseCategory],
+        primaryIndustry: primaryIndustry,
+        releaseVersion: releaseVersion,
+        baseIfsVersion: baseIfsVersion
       };
     });
     
@@ -314,7 +328,10 @@ export async function getRecommendedModules(
       moduleName: 'IFS Cloud Platform',
       description: 'Core IFS Cloud Platform',
       minVersion: '22.1',
-      mlCapabilities: [useCaseCategory]
+      mlCapabilities: [useCaseCategory],
+      primaryIndustry: primaryIndustry,
+      releaseVersion: releaseVersion,
+      baseIfsVersion: baseIfsVersion
     }];
   }
 }
@@ -399,9 +416,12 @@ export function normalizeUseCaseCategory(category: string): string {
     'finance': 'financial-forecasting',
     'fraud': 'fraud-detection',
     'analytics': 'customer-analytics',
-    'optimization': 'supply-chain-optimization',
+    'optimization': 'inventory-optimization',
+    'supply chain optimization': 'inventory-optimization',
+    'supply-chain-optimization': 'inventory-optimization',
     'classification': 'automated-classification',
-    'existing': 'existing'
+    'existing': 'existing',
+    'general': 'general'
   };
 
   return categoryMap[category.toLowerCase()] || category.toLowerCase();
