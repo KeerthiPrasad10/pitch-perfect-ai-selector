@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      customers: {
+        Row: {
+          base_ifs_version: string | null
+          customer_id: string
+          customer_name: string | null
+          primary_industry: string | null
+          release_version: string | null
+        }
+        Insert: {
+          base_ifs_version?: string | null
+          customer_id: string
+          customer_name?: string | null
+          primary_industry?: string | null
+          release_version?: string | null
+        }
+        Update: {
+          base_ifs_version?: string | null
+          customer_id?: string
+          customer_name?: string | null
+          primary_industry?: string | null
+          release_version?: string | null
+        }
+        Relationships: []
+      }
       file_embeddings: {
         Row: {
           chunk_index: number
@@ -78,6 +102,135 @@ export type Database = {
           id?: string
           industry?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      ifs_module_mappings: {
+        Row: {
+          base_ifs_version: string | null
+          created_at: string
+          description: string | null
+          id: string
+          min_version: string | null
+          ml_capabilities: string[] | null
+          module_code: string
+          module_name: string
+          primary_industry: string | null
+          release_version: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_ifs_version?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_version?: string | null
+          ml_capabilities?: string[] | null
+          module_code: string
+          module_name: string
+          primary_industry?: string | null
+          release_version?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_ifs_version?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_version?: string | null
+          ml_capabilities?: string[] | null
+          module_code?: string
+          module_name?: string
+          primary_industry?: string | null
+          release_version?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      industries: {
+        Row: {
+          industry_id: number
+          industry_name: string | null
+        }
+        Insert: {
+          industry_id?: never
+          industry_name?: string | null
+        }
+        Update: {
+          industry_id?: never
+          industry_name?: string | null
+        }
+        Relationships: []
+      }
+      industry_use_cases: {
+        Row: {
+          industry_id: number
+          position: number
+          use_case_id: number
+        }
+        Insert: {
+          industry_id: number
+          position: number
+          use_case_id: number
+        }
+        Update: {
+          industry_id?: number
+          position?: number
+          use_case_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "industry_use_cases_industry_id_fkey"
+            columns: ["industry_id"]
+            isOneToOne: false
+            referencedRelation: "industries"
+            referencedColumns: ["industry_id"]
+          },
+          {
+            foreignKeyName: "industry_use_cases_use_case_id_fkey"
+            columns: ["use_case_id"]
+            isOneToOne: false
+            referencedRelation: "use_cases"
+            referencedColumns: ["use_case_id"]
+          },
+        ]
+      }
+      use_cases: {
+        Row: {
+          base_ifs_version: string | null
+          description: string | null
+          functional_area: string | null
+          prerequisite: string | null
+          release_version: string | null
+          relevance: string | null
+          required_processes: string | null
+          short_description: string | null
+          use_case_id: number
+          use_case_name: string | null
+        }
+        Insert: {
+          base_ifs_version?: string | null
+          description?: string | null
+          functional_area?: string | null
+          prerequisite?: string | null
+          release_version?: string | null
+          relevance?: string | null
+          required_processes?: string | null
+          short_description?: string | null
+          use_case_id?: never
+          use_case_name?: string | null
+        }
+        Update: {
+          base_ifs_version?: string | null
+          description?: string | null
+          functional_area?: string | null
+          prerequisite?: string | null
+          release_version?: string | null
+          relevance?: string | null
+          required_processes?: string | null
+          short_description?: string | null
+          use_case_id?: never
+          use_case_name?: string | null
         }
         Relationships: []
       }

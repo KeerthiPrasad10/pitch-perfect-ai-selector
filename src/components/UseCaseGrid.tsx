@@ -1,9 +1,9 @@
 
-import { Briefcase, FileText } from "lucide-react";
+import { Briefcase, FileText, Database } from "lucide-react";
 import { UseCaseCard } from "./UseCaseCard";
 import { processDocumentUseCases, processCurrentUseCases } from "@/utils/useCaseProcessing";
 import { useEffect, useState } from "react";
-import { normalizeUseCaseCategory, getRecommendedModules } from "@/utils/ifs";
+import { normalizeUseCaseCategory, getRecommendedModules, getCustomerInfo } from "@/utils/ifs";
 import { supabase } from "@/integrations/supabase/client";
 
 interface UseCaseGridProps {
@@ -27,15 +27,20 @@ export const UseCaseGrid = ({
 }: UseCaseGridProps) => {
   const [allUseCases, setAllUseCases] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [customerInfo, setCustomerInfo] = useState<any>(null);
 
   useEffect(() => {
     const processUseCases = async () => {
       setIsLoading(true);
       
-      // Get current use cases from customer analysis
-      const currentUseCases = customerAnalysis?.currentUseCases || [];
+      // Get customer information from database first
+      const dbCustomerInfo = customerName ? await getCustomerInfo(customerName) : null;
+      setCustomerInfo(dbCustomerInfo);
       
-      // Get OpenAI API key from customer analysis only (not from process.env in browser)
+      // Get current use cases from customer analysis or database
+      const currentUseCases = dbCustomerInfo?.currentUseCases || customerAnalysis?.currentUseCases || [];
+      
+      // Get OpenAI API key from customer analysis
       const openAIApiKey = customerAnalysis?.openAIApiKey;
 
       // Only process factual use cases from documents (no AI generation)
@@ -49,7 +54,7 @@ export const UseCaseGrid = ({
         customerAnalysis
       );
 
-      // Validate existing customer use cases against embedded ML capabilities data
+      // Validate existing customer use cases against database ML capabilities
       const existingUseCases = await processCurrentUseCases(
         currentUseCases,
         selectedIndustry,
@@ -95,9 +100,9 @@ export const UseCaseGrid = ({
     );
   }
 
-  // Get customer details for display
-  const customerVersionInfo = customerAnalysis?.companyDetails;
-  const primaryIndustry = customerVersionInfo?.primaryIndustry || customerVersionInfo?.industry || selectedIndustry;
+  // Use database customer info if available, otherwise fall back to analysis
+  const displayCustomerInfo = customerInfo || customerAnalysis?.companyDetails;
+  const primaryIndustry = displayCustomerInfo?.primaryIndustry || displayCustomerInfo?.industry || selectedIndustry;
 
   return (
     <div className="space-y-6">
@@ -111,8 +116,17 @@ export const UseCaseGrid = ({
           )}
         </h2>
         <div className="text-sm text-gray-600 flex items-center space-x-2">
-          <FileText className="h-4 w-4" />
-          <span>Matched by: {primaryIndustry} • {customerVersionInfo?.releaseVersion} • {customerVersionInfo?.baseIfsVersion}</span>
+          {customerInfo ? (
+            <>
+              <Database className="h-4 w-4" />
+              <span>Database Match: {primaryIndustry} • {displayCustomerInfo?.releaseVersion || 'N/A'} • {displayCustomerInfo?.baseIfsVersion || 'N/A'}</span>
+            </>
+          ) : (
+            <>
+              <FileText className="h-4 w-4" />
+              <span>Analysis Based: {primaryIndustry} • {displayCustomerInfo?.releaseVersion || 'N/A'} • {displayCustomerInfo?.baseIfsVersion || 'N/A'}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -121,10 +135,15 @@ export const UseCaseGrid = ({
           <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No validated AI solutions found</h3>
           <p className="text-gray-600">
-            No ML use cases found with confirmed capabilities in the embedded IFS data that match the combination of {primaryIndustry} industry, 
-            {customerVersionInfo?.releaseVersion || 'unknown'} release version, and 
-            {customerVersionInfo?.baseIfsVersion || 'unknown'} deployment type.
+            No ML use cases found with confirmed capabilities in the database that match the combination of {primaryIndustry} industry, 
+            {displayCustomerInfo?.releaseVersion || 'unknown'} release version, and 
+            {displayCustomerInfo?.baseIfsVersion || 'unknown'} deployment type.
           </p>
+          {!customerInfo && (
+            <p className="text-sm text-blue-600 mt-2">
+              Customer not found in database. Results based on AI analysis only.
+            </p>
+          )}
         </div>
       )}
 
