@@ -3,6 +3,7 @@ import { Briefcase, FileText } from "lucide-react";
 import { UseCaseCard } from "./UseCaseCard";
 import { processDocumentUseCases, processRelatedIndustryUseCases } from "@/utils/useCaseProcessing";
 import { useEffect, useState } from "react";
+import { normalizeUseCaseCategory, getRecommendedModules } from "@/utils/ifsVersionMapping";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
@@ -38,33 +39,53 @@ export const UseCaseGrid = ({
         aiRecommendations, 
         selectedIndustry, 
         customerName || '', 
-        currentUseCases
+        currentUseCases,
+        undefined,
+        undefined,
+        customerAnalysis
       );
 
-      // Add existing customer use cases as factual data
-      const existingUseCases = currentUseCases.map((useCase: string, index: number) => ({
-        id: `existing-${index}`,
-        title: useCase,
-        description: `Existing AI/ML use case currently implemented by ${customerName}`,
-        category: 'existing',
-        implementation: 'Implemented',
-        timeline: 'Active',
-        industries: [selectedIndustry],
-        costSavings: 'Active',
-        isFromDocuments: false,
-        ragEnhanced: false,
-        ragSources: [],
-        sources: [],
-        industryRelevance: 'primary',
-        targetCustomer: customerName,
-        implementationJustification: 'Currently active implementation',
-        timelineJustification: 'Already implemented and active',
-        savingsJustification: 'Actively generating value',
-        isExisting: true,
-        baseVersion: customerAnalysis?.companyDetails?.baseIfsVersion || 'TBD',
-        releaseVersion: customerAnalysis?.companyDetails?.releaseVersion || 'TBD',
-        requiredProcess: 'Active'
-      }));
+      // Add existing customer use cases as factual data with proper IFS version info
+      const existingUseCases = currentUseCases.map((useCase: string, index: number) => {
+        const normalizedCategory = normalizeUseCaseCategory('existing');
+        const recommendedModules = getRecommendedModules(normalizedCategory);
+        const primaryModule = recommendedModules[0];
+        
+        // Get customer's IFS version info
+        const customerVersionInfo = customerAnalysis?.companyDetails;
+        const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.releaseVersion || 'Current';
+        const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || 'Current';
+        
+        return {
+          id: `existing-${index}`,
+          title: useCase,
+          description: `Active AI/ML solution currently implemented by ${customerName}. This use case is operational and generating business value.`,
+          category: 'existing',
+          implementation: 'Active Implementation',
+          timeline: 'Currently Active',
+          industries: [selectedIndustry],
+          costSavings: 'Actively Generating ROI',
+          isFromDocuments: false,
+          ragEnhanced: false,
+          ragSources: [],
+          sources: [],
+          industryRelevance: 'primary',
+          targetCustomer: customerName,
+          implementationJustification: 'Successfully implemented and currently operational',
+          timelineJustification: 'Live production system with ongoing benefits',
+          savingsJustification: 'Measurable business value being generated from active implementation',
+          isExisting: true,
+          baseVersion: baseVersion,
+          releaseVersion: releaseVersion,
+          requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
+          status: 'Active',
+          coreModules: recommendedModules.map(m => ({
+            code: m.moduleCode,
+            name: m.moduleName,
+            compatible: true // Since it's already active
+          }))
+        };
+      });
 
       // Filter based on search and category
       const filteredUseCases = [...existingUseCases, ...documentUseCases].filter(useCase => {
@@ -109,7 +130,7 @@ export const UseCaseGrid = ({
           {allUseCases.length} Factual AI Solution{allUseCases.length !== 1 ? 's' : ''} for {customerName}
           {(existingUseCases.length > 0 || documentUseCases.length > 0) && (
             <span className="ml-2 text-sm text-purple-600 font-normal">
-              ({existingUseCases.length} existing, {documentUseCases.length} from documents)
+              ({existingUseCases.length} active implementations, {documentUseCases.length} from documents)
             </span>
           )}
         </h2>

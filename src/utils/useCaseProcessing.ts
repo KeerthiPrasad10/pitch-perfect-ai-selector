@@ -1,5 +1,6 @@
 
 import { isExistingUseCase } from "./useCaseUtils";
+import { getRecommendedModules, normalizeUseCaseCategory, getVersionCompatibility } from "./ifsVersionMapping";
 
 export const processDocumentUseCases = async (
   aiRecommendations: any[],
@@ -7,35 +8,55 @@ export const processDocumentUseCases = async (
   customerName: string,
   currentUseCases: string[],
   openAIApiKey?: string,
-  supabase?: any
+  supabase?: any,
+  customerAnalysis?: any
 ) => {
   // Only process use cases that are explicitly from uploaded documents
   // No AI generation - only factual data from documents
   const processedUseCases = aiRecommendations
     .filter(useCase => useCase.isFromDocuments === true) // Only document-based factual use cases
-    .map((useCase, index) => ({
-      id: `doc-${index}`,
-      title: useCase?.title || 'Document Use Case',
-      description: useCase?.description || 'Use case found in uploaded documents',
-      category: useCase?.category || 'general',
-      implementation: useCase?.implementation || 'TBD',
-      timeline: useCase?.timeline || 'TBD',
-      industries: [selectedIndustry],
-      costSavings: useCase?.costSavings || 'TBD',
-      isFromDocuments: true,
-      ragEnhanced: false,
-      ragSources: useCase?.ragSources || [],
-      sources: useCase?.sources || [],
-      industryRelevance: 'primary',
-      targetCustomer: customerName,
-      implementationJustification: 'Based on factual information found in uploaded documents',
-      timelineJustification: 'Timeline based on project details described in documents',
-      savingsJustification: 'Cost information based on data found in documents',
-      isExisting: isExistingUseCase(useCase?.title || 'Document Use Case', currentUseCases),
-      baseVersion: useCase?.baseVersion || 'TBD',
-      releaseVersion: useCase?.releaseVersion || 'TBD',
-      requiredProcess: useCase?.requiredProcess || 'TBD'
-    }));
+    .map((useCase, index) => {
+      const normalizedCategory = normalizeUseCaseCategory(useCase?.category || 'general');
+      const recommendedModules = getRecommendedModules(normalizedCategory);
+      const primaryModule = recommendedModules[0];
+      
+      // Get customer's IFS version info
+      const customerVersionInfo = customerAnalysis?.companyDetails;
+      const baseVersion = customerVersionInfo?.baseIfsVersion || '22.1';
+      const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || '22.1';
+      
+      // Check version compatibility
+      const compatibility = getVersionCompatibility(baseVersion, normalizedCategory);
+      
+      return {
+        id: `doc-${index}`,
+        title: useCase?.title || 'Document Use Case',
+        description: useCase?.description || 'Use case found in uploaded documents',
+        category: normalizedCategory,
+        implementation: useCase?.implementation || (compatibility.compatible ? 'Compatible' : 'Upgrade Required'),
+        timeline: useCase?.timeline || (compatibility.compatible ? 'Ready for Implementation' : `Upgrade to ${compatibility.requiredVersion} Required`),
+        industries: [selectedIndustry],
+        costSavings: useCase?.costSavings || 'Based on documented benefits',
+        isFromDocuments: true,
+        ragEnhanced: false,
+        ragSources: useCase?.ragSources || [],
+        sources: useCase?.sources || [],
+        industryRelevance: 'primary',
+        targetCustomer: customerName,
+        implementationJustification: useCase?.implementationJustification || 'Based on factual information found in uploaded documents',
+        timelineJustification: useCase?.timelineJustification || 'Timeline based on project details described in documents',
+        savingsJustification: useCase?.savingsJustification || 'Cost information based on data found in documents',
+        isExisting: isExistingUseCase(useCase?.title || 'Document Use Case', currentUseCases),
+        baseVersion: baseVersion,
+        releaseVersion: releaseVersion,
+        requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
+        coreModules: recommendedModules.map(m => ({
+          code: m.moduleCode,
+          name: m.moduleName,
+          compatible: compatibility.compatible
+        }))
+      };
+    });
 
   // Sort to put existing use cases first
   return processedUseCases.sort((a, b) => {
