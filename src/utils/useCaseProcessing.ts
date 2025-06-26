@@ -1,6 +1,6 @@
 
 import { isExistingUseCase } from "./useCaseUtils";
-import { getRecommendedModules, normalizeUseCaseCategory, getVersionCompatibility } from "./ifsVersionMapping";
+import { getRecommendedModules, normalizeUseCaseCategory, getVersionCompatibility } from "./ifs";
 
 export const processDocumentUseCases = async (
   aiRecommendations: any[],
@@ -34,6 +34,13 @@ export const processDocumentUseCases = async (
           releaseVersion,
           baseVersion // Cloud or Remote
         );
+        
+        // Only return use cases that have supporting ML capabilities in embedded data
+        if (recommendedModules.length === 0) {
+          console.log(`Filtering out use case "${useCase?.title}" - no ML capabilities found in embedded data`);
+          return null;
+        }
+        
         const primaryModule = recommendedModules[0];
         
         // Check version compatibility using embedded data with customer context
@@ -81,12 +88,98 @@ export const processDocumentUseCases = async (
       })
   );
 
+  // Filter out null values (use cases without ML capabilities)
+  const validUseCases = processedUseCases.filter(useCase => useCase !== null);
+
   // Sort to put existing use cases first
-  return processedUseCases.sort((a, b) => {
+  return validUseCases.sort((a, b) => {
     if (a.isExisting && !b.isExisting) return -1;
     if (!a.isExisting && b.isExisting) return 1;
     return 0;
   });
+};
+
+// Process current use cases and validate they have ML capabilities in embedded data
+export const processCurrentUseCases = async (
+  currentUseCases: string[],
+  selectedIndustry: string,
+  customerName: string,
+  openAIApiKey?: string,
+  supabase?: any,
+  customerAnalysis?: any
+) => {
+  if (!currentUseCases || currentUseCases.length === 0) {
+    return [];
+  }
+
+  const customerVersionInfo = customerAnalysis?.companyDetails;
+  const primaryIndustry = customerVersionInfo?.primaryIndustry || customerVersionInfo?.industry || selectedIndustry;
+  const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.ifsVersion || 'Cloud';
+  const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || '22.1';
+
+  const validatedUseCases = await Promise.all(
+    currentUseCases.map(async (useCase: string, index: number) => {
+      // Try to find ML capabilities for this use case
+      const normalizedCategory = normalizeUseCaseCategory(useCase.toLowerCase());
+      
+      // Get modules from embedded Excel data
+      const recommendedModules = await getRecommendedModules(
+        normalizedCategory, 
+        supabase, 
+        openAIApiKey,
+        primaryIndustry,
+        releaseVersion,
+        baseVersion
+      );
+      
+      // Only include use cases that have supporting ML capabilities in embedded data
+      if (recommendedModules.length === 0) {
+        console.log(`Filtering out current use case "${useCase}" - no ML capabilities found in embedded data`);
+        return null;
+      }
+      
+      const primaryModule = recommendedModules[0];
+      
+      return {
+        id: `existing-${index}`,
+        title: useCase,
+        description: `Active AI/ML solution currently implemented by ${customerName}. This use case is operational and generating business value in the ${primaryIndustry} industry on ${baseVersion} deployment.`,
+        category: normalizedCategory,
+        implementation: 'Active Implementation',
+        timeline: 'Currently Active',
+        industries: [selectedIndustry],
+        costSavings: 'Actively Generating ROI',
+        isFromDocuments: false,
+        ragEnhanced: false,
+        ragSources: [],
+        sources: [],
+        industryRelevance: 'primary',
+        targetCustomer: customerName,
+        implementationJustification: 'Successfully implemented and currently operational',
+        timelineJustification: 'Live production system with ongoing benefits',
+        savingsJustification: 'Measurable business value being generated from active implementation',
+        isExisting: true,
+        baseVersion: baseVersion,
+        releaseVersion: releaseVersion,
+        primaryIndustry: primaryIndustry,
+        requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
+        status: 'Active',
+        coreModules: recommendedModules.map(m => ({
+          code: m.moduleCode,
+          name: m.moduleName,
+          compatible: true, // Since it's already active
+          minVersion: m.minVersion,
+          description: m.description,
+          industryMatch: !primaryIndustry || !m.primaryIndustry || m.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase()),
+          versionMatch: !releaseVersion || !m.releaseVersion || m.releaseVersion === releaseVersion,
+          deploymentMatch: !baseVersion || !m.baseIfsVersion || m.baseIfsVersion === baseVersion
+        }))
+      };
+    })
+  );
+
+  // Filter out null values (use cases without ML capabilities)
+  return validatedUseCases.filter(useCase => useCase !== null);
 };
 
 export const processRelatedIndustryUseCases = async (

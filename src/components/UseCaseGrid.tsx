@@ -1,9 +1,9 @@
 
 import { Briefcase, FileText } from "lucide-react";
 import { UseCaseCard } from "./UseCaseCard";
-import { processDocumentUseCases, processRelatedIndustryUseCases } from "@/utils/useCaseProcessing";
+import { processDocumentUseCases, processCurrentUseCases } from "@/utils/useCaseProcessing";
 import { useEffect, useState } from "react";
-import { normalizeUseCaseCategory, getRecommendedModules } from "@/utils/ifsVersionMapping";
+import { normalizeUseCaseCategory, getRecommendedModules } from "@/utils/ifs";
 import { supabase } from "@/integrations/supabase/client";
 
 interface UseCaseGridProps {
@@ -38,12 +38,6 @@ export const UseCaseGrid = ({
       // Get OpenAI API key from customer analysis only (not from process.env in browser)
       const openAIApiKey = customerAnalysis?.openAIApiKey;
 
-      // Get customer's IFS details for matching
-      const customerVersionInfo = customerAnalysis?.companyDetails;
-      const primaryIndustry = customerVersionInfo?.primaryIndustry || customerVersionInfo?.industry || selectedIndustry;
-      const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.ifsVersion || 'Cloud'; // Cloud or Remote
-      const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || '22.1';
-
       // Only process factual use cases from documents (no AI generation)
       const documentUseCases = await processDocumentUseCases(
         aiRecommendations, 
@@ -55,58 +49,14 @@ export const UseCaseGrid = ({
         customerAnalysis
       );
 
-      // Add existing customer use cases as factual data with customer-specific IFS version info
-      const existingUseCases = await Promise.all(
-        currentUseCases.map(async (useCase: string, index: number) => {
-          const normalizedCategory = normalizeUseCaseCategory('existing');
-          
-          // Get modules from embedded Excel data with customer-specific matching (including deployment type)
-          const recommendedModules = await getRecommendedModules(
-            normalizedCategory, 
-            supabase, 
-            openAIApiKey,
-            primaryIndustry,
-            releaseVersion,
-            baseVersion // Cloud or Remote
-          );
-          const primaryModule = recommendedModules[0];
-          
-          return {
-            id: `existing-${index}`,
-            title: useCase,
-            description: `Active AI/ML solution currently implemented by ${customerName}. This use case is operational and generating business value in the ${primaryIndustry} industry on ${baseVersion} deployment.`,
-            category: 'existing',
-            implementation: 'Active Implementation',
-            timeline: 'Currently Active',
-            industries: [selectedIndustry],
-            costSavings: 'Actively Generating ROI',
-            isFromDocuments: false,
-            ragEnhanced: false,
-            ragSources: [],
-            sources: [],
-            industryRelevance: 'primary',
-            targetCustomer: customerName,
-            implementationJustification: 'Successfully implemented and currently operational',
-            timelineJustification: 'Live production system with ongoing benefits',
-            savingsJustification: 'Measurable business value being generated from active implementation',
-            isExisting: true,
-            baseVersion: baseVersion, // Cloud or Remote
-            releaseVersion: releaseVersion,
-            primaryIndustry: primaryIndustry,
-            requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
-            status: 'Active',
-            coreModules: recommendedModules.map(m => ({
-              code: m.moduleCode,
-              name: m.moduleName,
-              compatible: true, // Since it's already active
-              minVersion: m.minVersion,
-              description: m.description,
-              industryMatch: !primaryIndustry || !m.primaryIndustry || m.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase()),
-              versionMatch: !releaseVersion || !m.releaseVersion || m.releaseVersion === releaseVersion,
-              deploymentMatch: !baseVersion || !m.baseIfsVersion || m.baseIfsVersion === baseVersion // Cloud or Remote
-            }))
-          };
-        })
+      // Validate existing customer use cases against embedded ML capabilities data
+      const existingUseCases = await processCurrentUseCases(
+        currentUseCases,
+        selectedIndustry,
+        customerName || '',
+        openAIApiKey,
+        supabase,
+        customerAnalysis
       );
 
       // Filter based on search and category
@@ -153,7 +103,7 @@ export const UseCaseGrid = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
-          {allUseCases.length} Matched AI Solution{allUseCases.length !== 1 ? 's' : ''} for {customerName}
+          {allUseCases.length} Validated AI Solution{allUseCases.length !== 1 ? 's' : ''} for {customerName}
           {(existingUseCases.length > 0 || documentUseCases.length > 0) && (
             <span className="ml-2 text-sm text-purple-600 font-normal">
               ({existingUseCases.length} active implementations, {documentUseCases.length} from documents)
@@ -169,9 +119,9 @@ export const UseCaseGrid = ({
       {allUseCases.length === 0 && (
         <div className="text-center py-12">
           <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No matching AI solutions found</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No validated AI solutions found</h3>
           <p className="text-gray-600">
-            No ML use cases found that match the combination of {primaryIndustry} industry, 
+            No ML use cases found with confirmed capabilities in the embedded IFS data that match the combination of {primaryIndustry} industry, 
             {customerVersionInfo?.releaseVersion || 'unknown'} release version, and 
             {customerVersionInfo?.baseIfsVersion || 'unknown'} deployment type.
           </p>
