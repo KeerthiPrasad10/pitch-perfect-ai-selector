@@ -6,7 +6,7 @@ import { getModulesFromDatabase } from './directDataService';
 // Get recommended IFS modules for a use case with customer-specific matching
 export async function getRecommendedModules(
   useCaseCategory: string, 
-  supabase?: any, 
+  supabaseClient?: any, 
   openAIApiKey?: string,
   primaryIndustry?: string,
   releaseVersion?: string,
@@ -40,9 +40,9 @@ export async function getRecommendedModules(
 }
 
 // Check if a module supports a specific ML capability using direct database query
-export async function isMLCapabilitySupported(moduleCode: string, capability: string): Promise<boolean> {
+export async function isMLCapabilitySupported(moduleCode: string, capability: string, supabaseClient: any): Promise<boolean> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('ifs_module_mappings')
       .select('ml_capabilities')
       .eq('module_code', moduleCode)
