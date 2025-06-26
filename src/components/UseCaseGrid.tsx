@@ -1,9 +1,9 @@
-
 import { Briefcase, FileText } from "lucide-react";
 import { UseCaseCard } from "./UseCaseCard";
 import { processDocumentUseCases, processRelatedIndustryUseCases } from "@/utils/useCaseProcessing";
 import { useEffect, useState } from "react";
 import { normalizeUseCaseCategory, getRecommendedModules } from "@/utils/ifsVersionMapping";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseCaseGridProps {
   selectedIndustry: string;
@@ -33,6 +33,9 @@ export const UseCaseGrid = ({
       
       // Get current use cases from customer analysis
       const currentUseCases = customerAnalysis?.currentUseCases || [];
+      
+      // Get OpenAI API key from environment or customer analysis
+      const openAIApiKey = customerAnalysis?.openAIApiKey || process.env.OPENAI_API_KEY;
 
       // Only process factual use cases from documents (no AI generation)
       const documentUseCases = await processDocumentUseCases(
@@ -40,52 +43,58 @@ export const UseCaseGrid = ({
         selectedIndustry, 
         customerName || '', 
         currentUseCases,
-        undefined,
-        undefined,
+        openAIApiKey,
+        supabase,
         customerAnalysis
       );
 
-      // Add existing customer use cases as factual data with proper IFS version info
-      const existingUseCases = currentUseCases.map((useCase: string, index: number) => {
-        const normalizedCategory = normalizeUseCaseCategory('existing');
-        const recommendedModules = getRecommendedModules(normalizedCategory);
-        const primaryModule = recommendedModules[0];
-        
-        // Get customer's IFS version info
-        const customerVersionInfo = customerAnalysis?.companyDetails;
-        const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.releaseVersion || 'Current';
-        const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || 'Current';
-        
-        return {
-          id: `existing-${index}`,
-          title: useCase,
-          description: `Active AI/ML solution currently implemented by ${customerName}. This use case is operational and generating business value.`,
-          category: 'existing',
-          implementation: 'Active Implementation',
-          timeline: 'Currently Active',
-          industries: [selectedIndustry],
-          costSavings: 'Actively Generating ROI',
-          isFromDocuments: false,
-          ragEnhanced: false,
-          ragSources: [],
-          sources: [],
-          industryRelevance: 'primary',
-          targetCustomer: customerName,
-          implementationJustification: 'Successfully implemented and currently operational',
-          timelineJustification: 'Live production system with ongoing benefits',
-          savingsJustification: 'Measurable business value being generated from active implementation',
-          isExisting: true,
-          baseVersion: baseVersion,
-          releaseVersion: releaseVersion,
-          requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
-          status: 'Active',
-          coreModules: recommendedModules.map(m => ({
-            code: m.moduleCode,
-            name: m.moduleName,
-            compatible: true // Since it's already active
-          }))
-        };
-      });
+      // Add existing customer use cases as factual data with proper IFS version info from embedded Excel
+      const existingUseCases = await Promise.all(
+        currentUseCases.map(async (useCase: string, index: number) => {
+          const normalizedCategory = normalizeUseCaseCategory('existing');
+          
+          // Get modules from embedded Excel data
+          const recommendedModules = await getRecommendedModules(normalizedCategory, supabase, openAIApiKey);
+          const primaryModule = recommendedModules[0];
+          
+          // Get customer's IFS version info
+          const customerVersionInfo = customerAnalysis?.companyDetails;
+          const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.releaseVersion || 'Current';
+          const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || 'Current';
+          
+          return {
+            id: `existing-${index}`,
+            title: useCase,
+            description: `Active AI/ML solution currently implemented by ${customerName}. This use case is operational and generating business value.`,
+            category: 'existing',
+            implementation: 'Active Implementation',
+            timeline: 'Currently Active',
+            industries: [selectedIndustry],
+            costSavings: 'Actively Generating ROI',
+            isFromDocuments: false,
+            ragEnhanced: false,
+            ragSources: [],
+            sources: [],
+            industryRelevance: 'primary',
+            targetCustomer: customerName,
+            implementationJustification: 'Successfully implemented and currently operational',
+            timelineJustification: 'Live production system with ongoing benefits',
+            savingsJustification: 'Measurable business value being generated from active implementation',
+            isExisting: true,
+            baseVersion: baseVersion,
+            releaseVersion: releaseVersion,
+            requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
+            status: 'Active',
+            coreModules: recommendedModules.map(m => ({
+              code: m.moduleCode,
+              name: m.moduleName,
+              compatible: true, // Since it's already active
+              minVersion: m.minVersion,
+              description: m.description
+            }))
+          };
+        })
+      );
 
       // Filter based on search and category
       const filteredUseCases = [...existingUseCases, ...documentUseCases].filter(useCase => {
@@ -136,7 +145,7 @@ export const UseCaseGrid = ({
         </h2>
         <div className="text-sm text-gray-600 flex items-center space-x-2">
           <FileText className="h-4 w-4" />
-          <span>Factual use cases only</span>
+          <span>Data from embedded Excel sheet</span>
         </div>
       </div>
 

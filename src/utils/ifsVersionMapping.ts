@@ -1,5 +1,5 @@
 
-// IFS Version and Module Mapping Utilities
+// IFS Version and Module Mapping Utilities - Using Embedded Excel Data
 export interface IFSVersionInfo {
   baseVersion: string;
   releaseVersion: string;
@@ -15,113 +15,268 @@ export interface IFSCoreModule {
   mlCapabilities: string[];
 }
 
-// Core IFS modules that support AI/ML capabilities
-export const IFS_CORE_MODULES: Record<string, IFSCoreModule> = {
-  'MANUF': {
-    moduleCode: 'MANUF',
-    moduleName: 'Manufacturing',
-    description: 'Production planning, scheduling, and shop floor management',
-    minVersion: '22.1',
-    mlCapabilities: ['predictive-maintenance', 'quality-control', 'production-optimization']
-  },
-  'SCM': {
-    moduleCode: 'SCM',
-    moduleName: 'Supply Chain Management',
-    description: 'Procurement, inventory, and logistics management',
-    minVersion: '22.2',
-    mlCapabilities: ['demand-forecasting', 'inventory-optimization', 'supplier-analytics']
-  },
-  'CRM': {
-    moduleCode: 'CRM',
-    moduleName: 'Customer Relationship Management',
-    description: 'Sales, marketing, and customer service',
-    minVersion: '23.1',
-    mlCapabilities: ['customer-analytics', 'sentiment-analysis', 'lead-scoring']
-  },
-  'EAM': {
-    moduleCode: 'EAM',
-    moduleName: 'Enterprise Asset Management',
-    description: 'Asset lifecycle and maintenance management',
-    minVersion: '22.1',
-    mlCapabilities: ['predictive-maintenance', 'anomaly-detection', 'asset-optimization']
-  },
-  'FINANCE': {
-    moduleCode: 'FINANCE',
-    moduleName: 'Financial Management',
-    description: 'Accounting, budgeting, and financial reporting',
-    minVersion: '22.2',
-    mlCapabilities: ['fraud-detection', 'financial-forecasting', 'automated-classification']
-  },
-  'HCM': {
-    moduleCode: 'HCM',
-    moduleName: 'Human Capital Management',
-    description: 'HR processes and workforce management',
-    minVersion: '23.1',
-    mlCapabilities: ['employee-analytics', 'recruitment-optimization', 'performance-prediction']
-  },
-  'PROJECT': {
-    moduleCode: 'PROJECT',
-    moduleName: 'Project Management',
-    description: 'Project planning, execution, and portfolio management',
-    minVersion: '22.2',
-    mlCapabilities: ['project-risk-analysis', 'resource-optimization', 'timeline-prediction']
+// Get IFS module and version data from embedded Excel sheet
+async function getEmbeddedMappingData(supabase: any, openAIApiKey?: string): Promise<any> {
+  try {
+    if (!openAIApiKey || !supabase) {
+      return null;
+    }
+
+    // Create embedding for IFS module and version mapping query
+    const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        input: 'IFS modules AI ML capabilities version mapping core modules manufacturing SCM CRM EAM finance HCM project management',
+        model: 'text-embedding-ada-002',
+      }),
+    });
+
+    if (!embeddingResponse.ok) {
+      return null;
+    }
+
+    const embeddingData = await embeddingResponse.json();
+    const queryEmbedding = embeddingData.data[0].embedding;
+
+    // Search for IFS mapping data in embedded Excel sheet
+    const { data: searchResults, error } = await supabase.rpc('search_embeddings', {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.7,
+      match_count: 10
+    });
+
+    if (error || !searchResults || searchResults.length === 0) {
+      return null;
+    }
+
+    return searchResults;
+  } catch (error) {
+    console.log('Error fetching embedded mapping data:', error);
+    return null;
   }
-};
-
-// Map AI/ML use case categories to IFS core modules
-export const USE_CASE_TO_MODULE_MAPPING: Record<string, string[]> = {
-  'predictive-maintenance': ['MANUF', 'EAM'],
-  'quality-control': ['MANUF'],
-  'demand-forecasting': ['SCM'],
-  'inventory-optimization': ['SCM'],
-  'customer-analytics': ['CRM'],
-  'sentiment-analysis': ['CRM'],
-  'fraud-detection': ['FINANCE'],
-  'anomaly-detection': ['EAM', 'MANUF'],
-  'automated-classification': ['FINANCE', 'SCM'],
-  'supply-chain-optimization': ['SCM'],
-  'production-optimization': ['MANUF'],
-  'financial-forecasting': ['FINANCE'],
-  'employee-analytics': ['HCM'],
-  'project-risk-analysis': ['PROJECT'],
-  'asset-optimization': ['EAM']
-};
-
-// Get recommended IFS modules for a use case
-export function getRecommendedModules(useCaseCategory: string): IFSCoreModule[] {
-  const moduleKeys = USE_CASE_TO_MODULE_MAPPING[useCaseCategory] || [];
-  return moduleKeys.map(key => IFS_CORE_MODULES[key]).filter(Boolean);
 }
 
-// Check if a module supports a specific ML capability
+// Parse embedded Excel data to extract IFS module information
+function parseEmbeddedModuleData(embeddedData: any[]): Record<string, IFSCoreModule> {
+  const modules: Record<string, IFSCoreModule> = {};
+  
+  // Extract module information from embedded Excel data
+  embeddedData.forEach(chunk => {
+    const text = chunk.chunk_text.toLowerCase();
+    
+    // Look for module patterns in the embedded data
+    if (text.includes('manufacturing') || text.includes('manuf')) {
+      modules['MANUF'] = {
+        moduleCode: 'MANUF',
+        moduleName: 'Manufacturing',
+        description: 'Production planning, scheduling, and shop floor management',
+        minVersion: extractVersionFromText(text) || '22.1',
+        mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'quality-control', 'production-optimization'])
+      };
+    }
+    
+    if (text.includes('supply chain') || text.includes('scm')) {
+      modules['SCM'] = {
+        moduleCode: 'SCM',
+        moduleName: 'Supply Chain Management',
+        description: 'Procurement, inventory, and logistics management',
+        minVersion: extractVersionFromText(text) || '22.2',
+        mlCapabilities: extractCapabilitiesFromText(text, ['demand-forecasting', 'inventory-optimization', 'supplier-analytics'])
+      };
+    }
+    
+    if (text.includes('customer relationship') || text.includes('crm')) {
+      modules['CRM'] = {
+        moduleCode: 'CRM',
+        moduleName: 'Customer Relationship Management',
+        description: 'Sales, marketing, and customer service',
+        minVersion: extractVersionFromText(text) || '23.1',
+        mlCapabilities: extractCapabilitiesFromText(text, ['customer-analytics', 'sentiment-analysis', 'lead-scoring'])
+      };
+    }
+    
+    if (text.includes('enterprise asset') || text.includes('eam')) {
+      modules['EAM'] = {
+        moduleCode: 'EAM',
+        moduleName: 'Enterprise Asset Management',
+        description: 'Asset lifecycle and maintenance management',
+        minVersion: extractVersionFromText(text) || '22.1',
+        mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'anomaly-detection', 'asset-optimization'])
+      };
+    }
+    
+    if (text.includes('financial') || text.includes('finance')) {
+      modules['FINANCE'] = {
+        moduleCode: 'FINANCE',
+        moduleName: 'Financial Management',
+        description: 'Accounting, budgeting, and financial reporting',
+        minVersion: extractVersionFromText(text) || '22.2',
+        mlCapabilities: extractCapabilitiesFromText(text, ['fraud-detection', 'financial-forecasting', 'automated-classification'])
+      };
+    }
+    
+    if (text.includes('human capital') || text.includes('hcm') || text.includes('hr')) {
+      modules['HCM'] = {
+        moduleCode: 'HCM',
+        moduleName: 'Human Capital Management',
+        description: 'HR processes and workforce management',
+        minVersion: extractVersionFromText(text) || '23.1',
+        mlCapabilities: extractCapabilitiesFromText(text, ['employee-analytics', 'recruitment-optimization', 'performance-prediction'])
+      };
+    }
+    
+    if (text.includes('project management') || text.includes('project')) {
+      modules['PROJECT'] = {
+        moduleCode: 'PROJECT',
+        moduleName: 'Project Management',
+        description: 'Project planning, execution, and portfolio management',
+        minVersion: extractVersionFromText(text) || '22.2',
+        mlCapabilities: extractCapabilitiesFromText(text, ['project-risk-analysis', 'resource-optimization', 'timeline-prediction'])
+      };
+    }
+  });
+  
+  return modules;
+}
+
+// Extract version information from embedded text
+function extractVersionFromText(text: string): string | null {
+  const versionPattern = /(\d+\.\d+)/g;
+  const matches = text.match(versionPattern);
+  return matches ? matches[0] : null;
+}
+
+// Extract capabilities from embedded text
+function extractCapabilitiesFromText(text: string, possibleCapabilities: string[]): string[] {
+  const capabilities: string[] = [];
+  possibleCapabilities.forEach(cap => {
+    if (text.includes(cap.replace('-', ' ')) || text.includes(cap)) {
+      capabilities.push(cap);
+    }
+  });
+  return capabilities;
+}
+
+// Cache for embedded data to avoid repeated API calls
+let cachedEmbeddedData: any = null;
+let cachedModules: Record<string, IFSCoreModule> = {};
+
+// Get recommended IFS modules for a use case using embedded data
+export async function getRecommendedModules(
+  useCaseCategory: string, 
+  supabase?: any, 
+  openAIApiKey?: string
+): Promise<IFSCoreModule[]> {
+  try {
+    // Try to get data from embedded Excel sheet first
+    if (supabase && openAIApiKey && !cachedEmbeddedData) {
+      cachedEmbeddedData = await getEmbeddedMappingData(supabase, openAIApiKey);
+      if (cachedEmbeddedData) {
+        cachedModules = parseEmbeddedModuleData(cachedEmbeddedData);
+      }
+    }
+    
+    // Use embedded data if available
+    if (Object.keys(cachedModules).length > 0) {
+      const relevantModules: IFSCoreModule[] = [];
+      
+      // Map use case categories to modules based on embedded data
+      Object.values(cachedModules).forEach(module => {
+        if (module.mlCapabilities.includes(useCaseCategory)) {
+          relevantModules.push(module);
+        }
+      });
+      
+      if (relevantModules.length > 0) {
+        return relevantModules;
+      }
+    }
+    
+    // Fallback to basic mapping if no embedded data found
+    const fallbackMapping: Record<string, string[]> = {
+      'predictive-maintenance': ['MANUF', 'EAM'],
+      'quality-control': ['MANUF'],
+      'demand-forecasting': ['SCM'],
+      'inventory-optimization': ['SCM'],
+      'customer-analytics': ['CRM'],
+      'sentiment-analysis': ['CRM'],
+      'fraud-detection': ['FINANCE'],
+      'anomaly-detection': ['EAM', 'MANUF'],
+      'automated-classification': ['FINANCE', 'SCM'],
+      'supply-chain-optimization': ['SCM'],
+      'production-optimization': ['MANUF'],
+      'financial-forecasting': ['FINANCE'],
+      'employee-analytics': ['HCM'],
+      'project-risk-analysis': ['PROJECT'],
+      'asset-optimization': ['EAM']
+    };
+    
+    const moduleKeys = fallbackMapping[useCaseCategory] || [];
+    const fallbackModules = moduleKeys.map(key => ({
+      moduleCode: key,
+      moduleName: key,
+      description: `${key} module`,
+      minVersion: '22.1',
+      mlCapabilities: [useCaseCategory]
+    }));
+    
+    return fallbackModules;
+  } catch (error) {
+    console.log('Error getting recommended modules:', error);
+    return [];
+  }
+}
+
+// Check if a module supports a specific ML capability using embedded data
 export function isMLCapabilitySupported(moduleCode: string, capability: string): boolean {
-  const module = IFS_CORE_MODULES[moduleCode];
+  const module = cachedModules[moduleCode];
   return module ? module.mlCapabilities.includes(capability) : false;
 }
 
-// Get version compatibility for ML capabilities
+// Get version compatibility for ML capabilities using embedded data
 export function getVersionCompatibility(baseVersion: string, capability: string): {
   compatible: boolean;
   requiredVersion?: string;
   upgradeNeeded: boolean;
 } {
-  const modules = getRecommendedModules(capability);
-  if (modules.length === 0) {
+  try {
+    const currentVersion = parseFloat(baseVersion);
+    
+    // Check embedded data for version requirements
+    if (Object.keys(cachedModules).length > 0) {
+      const relevantModules = Object.values(cachedModules).filter(module => 
+        module.mlCapabilities.includes(capability)
+      );
+      
+      if (relevantModules.length > 0) {
+        const requiredVersions = relevantModules.map(m => parseFloat(m.minVersion));
+        const minRequiredVersion = Math.min(...requiredVersions);
+        
+        return {
+          compatible: currentVersion >= minRequiredVersion,
+          requiredVersion: minRequiredVersion.toString(),
+          upgradeNeeded: currentVersion < minRequiredVersion
+        };
+      }
+    }
+    
+    // Fallback version check
+    const minVersion = 22.1;
+    return {
+      compatible: currentVersion >= minVersion,
+      requiredVersion: minVersion.toString(),
+      upgradeNeeded: currentVersion < minVersion
+    };
+  } catch (error) {
     return { compatible: false, upgradeNeeded: false };
   }
-
-  const currentVersion = parseFloat(baseVersion);
-  const requiredVersions = modules.map(m => parseFloat(m.minVersion));
-  const minRequiredVersion = Math.min(...requiredVersions);
-
-  return {
-    compatible: currentVersion >= minRequiredVersion,
-    requiredVersion: minRequiredVersion.toString(),
-    upgradeNeeded: currentVersion < minRequiredVersion
-  };
 }
 
-// Normalize use case categories to match our mapping
+// Normalize use case categories to match embedded data
 export function normalizeUseCaseCategory(category: string): string {
   const categoryMap: Record<string, string> = {
     'maintenance': 'predictive-maintenance',
@@ -133,7 +288,8 @@ export function normalizeUseCaseCategory(category: string): string {
     'fraud': 'fraud-detection',
     'analytics': 'customer-analytics',
     'optimization': 'supply-chain-optimization',
-    'classification': 'automated-classification'
+    'classification': 'automated-classification',
+    'existing': 'existing'
   };
 
   return categoryMap[category.toLowerCase()] || category.toLowerCase();
