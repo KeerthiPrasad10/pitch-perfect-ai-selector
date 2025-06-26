@@ -66,7 +66,7 @@ export const processDocumentUseCases = async (
           baseVersion: baseVersion, // Cloud or Remote
           releaseVersion: releaseVersion,
           primaryIndustry: primaryIndustry,
-          requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
+          requiredProcess: primaryModule ? `${primaryModule.moduleCode} - ${primaryModule.moduleName}` : 'IC10000 - IFS Cloud Platform',
           coreModules: recommendedModules.map(m => ({
             code: m.moduleCode,
             name: m.moduleName,

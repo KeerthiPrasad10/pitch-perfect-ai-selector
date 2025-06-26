@@ -99,9 +99,9 @@ function parseEmbeddedModuleData(
     
     // Look for module patterns in the embedded data
     if (text.includes('manufacturing') || text.includes('manuf')) {
-      modules['MANUF'] = {
-        moduleCode: 'MANUF',
-        moduleName: 'Manufacturing',
+      modules['IC10100'] = {
+        moduleCode: 'IC10100',
+        moduleName: 'IFS Manufacturing Platform',
         description: 'Production planning, scheduling, and shop floor management',
         minVersion: extractVersionFromText(text) || '22.1',
         mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'quality-control', 'production-optimization']),
@@ -112,9 +112,9 @@ function parseEmbeddedModuleData(
     }
     
     if (text.includes('supply chain') || text.includes('scm')) {
-      modules['SCM'] = {
-        moduleCode: 'SCM',
-        moduleName: 'Supply Chain Management',
+      modules['IC10200'] = {
+        moduleCode: 'IC10200',
+        moduleName: 'IFS Supply Chain Management Platform',
         description: 'Procurement, inventory, and logistics management',
         minVersion: extractVersionFromText(text) || '22.2',
         mlCapabilities: extractCapabilitiesFromText(text, ['demand-forecasting', 'inventory-optimization', 'supplier-analytics']),
@@ -125,9 +125,9 @@ function parseEmbeddedModuleData(
     }
     
     if (text.includes('customer relationship') || text.includes('crm')) {
-      modules['CRM'] = {
-        moduleCode: 'CRM',
-        moduleName: 'Customer Relationship Management',
+      modules['IC10300'] = {
+        moduleCode: 'IC10300',
+        moduleName: 'IFS Customer Relationship Management Platform',
         description: 'Sales, marketing, and customer service',
         minVersion: extractVersionFromText(text) || '23.1',
         mlCapabilities: extractCapabilitiesFromText(text, ['customer-analytics', 'sentiment-analysis', 'lead-scoring']),
@@ -138,9 +138,9 @@ function parseEmbeddedModuleData(
     }
     
     if (text.includes('enterprise asset') || text.includes('eam')) {
-      modules['EAM'] = {
-        moduleCode: 'EAM',
-        moduleName: 'Enterprise Asset Management',
+      modules['IC10400'] = {
+        moduleCode: 'IC10400',
+        moduleName: 'IFS Enterprise Asset Management Platform',
         description: 'Asset lifecycle and maintenance management',
         minVersion: extractVersionFromText(text) || '22.1',
         mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'anomaly-detection', 'asset-optimization']),
@@ -151,9 +151,9 @@ function parseEmbeddedModuleData(
     }
     
     if (text.includes('financial') || text.includes('finance')) {
-      modules['FINANCE'] = {
-        moduleCode: 'FINANCE',
-        moduleName: 'Financial Management',
+      modules['IC10500'] = {
+        moduleCode: 'IC10500',
+        moduleName: 'IFS Financial Management Platform',
         description: 'Accounting, budgeting, and financial reporting',
         minVersion: extractVersionFromText(text) || '22.2',
         mlCapabilities: extractCapabilitiesFromText(text, ['fraud-detection', 'financial-forecasting', 'automated-classification']),
@@ -164,9 +164,9 @@ function parseEmbeddedModuleData(
     }
     
     if (text.includes('human capital') || text.includes('hcm') || text.includes('hr')) {
-      modules['HCM'] = {
-        moduleCode: 'HCM',
-        moduleName: 'Human Capital Management',
+      modules['IC10600'] = {
+        moduleCode: 'IC10600',
+        moduleName: 'IFS Human Capital Management Platform',
         description: 'HR processes and workforce management',
         minVersion: extractVersionFromText(text) || '23.1',
         mlCapabilities: extractCapabilitiesFromText(text, ['employee-analytics', 'recruitment-optimization', 'performance-prediction']),
@@ -177,9 +177,9 @@ function parseEmbeddedModuleData(
     }
     
     if (text.includes('project management') || text.includes('project')) {
-      modules['PROJECT'] = {
-        moduleCode: 'PROJECT',
-        moduleName: 'Project Management',
+      modules['IC10700'] = {
+        moduleCode: 'IC10700',
+        moduleName: 'IFS Project Management Platform',
         description: 'Project planning, execution, and portfolio management',
         minVersion: extractVersionFromText(text) || '22.2',
         mlCapabilities: extractCapabilitiesFromText(text, ['project-risk-analysis', 'resource-optimization', 'timeline-prediction']),
@@ -266,36 +266,56 @@ export async function getRecommendedModules(
     
     // Fallback to basic mapping if no embedded data found
     const fallbackMapping: Record<string, string[]> = {
-      'predictive-maintenance': ['MANUF', 'EAM'],
-      'quality-control': ['MANUF'],
-      'demand-forecasting': ['SCM'],
-      'inventory-optimization': ['SCM'],
-      'customer-analytics': ['CRM'],
-      'sentiment-analysis': ['CRM'],
-      'fraud-detection': ['FINANCE'],
-      'anomaly-detection': ['EAM', 'MANUF'],
-      'automated-classification': ['FINANCE', 'SCM'],
-      'supply-chain-optimization': ['SCM'],
-      'production-optimization': ['MANUF'],
-      'financial-forecasting': ['FINANCE'],
-      'employee-analytics': ['HCM'],
-      'project-risk-analysis': ['PROJECT'],
-      'asset-optimization': ['EAM']
+      'predictive-maintenance': ['IC10100', 'IC10400'],
+      'quality-control': ['IC10100'],
+      'demand-forecasting': ['IC10200'],
+      'inventory-optimization': ['IC10200'],
+      'customer-analytics': ['IC10300'],
+      'sentiment-analysis': ['IC10300'],
+      'fraud-detection': ['IC10500'],
+      'anomaly-detection': ['IC10400', 'IC10100'],
+      'automated-classification': ['IC10500', 'IC10200'],
+      'supply-chain-optimization': ['IC10200'],
+      'production-optimization': ['IC10100'],
+      'financial-forecasting': ['IC10500'],
+      'employee-analytics': ['IC10600'],
+      'project-risk-analysis': ['IC10700'],
+      'asset-optimization': ['IC10400']
     };
     
-    const moduleKeys = fallbackMapping[useCaseCategory] || [];
-    const fallbackModules = moduleKeys.map(key => ({
-      moduleCode: key,
-      moduleName: key,
-      description: `${key} module`,
-      minVersion: '22.1',
-      mlCapabilities: [useCaseCategory]
-    }));
+    const moduleKeys = fallbackMapping[useCaseCategory] || ['IC10000'];
+    const fallbackModules = moduleKeys.map(key => {
+      const moduleNames: Record<string, string> = {
+        'IC10000': 'IFS Cloud Platform',
+        'IC10100': 'IFS Manufacturing Platform',
+        'IC10200': 'IFS Supply Chain Management Platform',
+        'IC10300': 'IFS Customer Relationship Management Platform',
+        'IC10400': 'IFS Enterprise Asset Management Platform',
+        'IC10500': 'IFS Financial Management Platform',
+        'IC10600': 'IFS Human Capital Management Platform',
+        'IC10700': 'IFS Project Management Platform'
+      };
+      
+      return {
+        moduleCode: key,
+        moduleName: moduleNames[key] || 'IFS Cloud Platform',
+        description: `${moduleNames[key]} module`,
+        minVersion: '22.1',
+        mlCapabilities: [useCaseCategory]
+      };
+    });
     
     return fallbackModules;
   } catch (error) {
     console.log('Error getting recommended modules:', error);
-    return [];
+    // Return default IFS Cloud Platform
+    return [{
+      moduleCode: 'IC10000',
+      moduleName: 'IFS Cloud Platform',
+      description: 'Core IFS Cloud Platform',
+      minVersion: '22.1',
+      mlCapabilities: [useCaseCategory]
+    }];
   }
 }
 
