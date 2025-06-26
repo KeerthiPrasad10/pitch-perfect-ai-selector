@@ -1,6 +1,4 @@
 
-import { useCaseData } from "@/data/useCaseData";
-
 export const exportToExcel = (
   customerName: string,
   selectedIndustry: string,
@@ -15,38 +13,16 @@ export const exportToExcel = (
     title: useCase.title,
     description: useCase.description,
     category: useCase.category,
-    roi: useCase.roi.replace('%', ''),
+    roi: useCase.roi?.replace('%', '') || 'TBD',
     implementation: useCase.implementation,
     timeline: useCase.timeline,
     industries: [selectedIndustry],
-    costSavings: "TBD",
-    isAiRecommended: true
+    costSavings: useCase.costSavings || "TBD",
+    isAiRecommended: true,
+    baseVersion: useCase.baseVersion || 'TBD',
+    releaseVersion: useCase.releaseVersion || 'TBD',
+    requiredProcess: useCase.requiredProcess || 'TBD'
   }));
-
-  // Filter regular use cases
-  const filteredRegularUseCases = useCaseData.filter(useCase => {
-    const matchesIndustry = !selectedIndustry || selectedIndustry === "all" || useCase.industries.includes(selectedIndustry);
-    const matchesSearch = !searchTerm || 
-      useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      useCase.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || selectedCategory === "all" || useCase.category === selectedCategory;
-    
-    return matchesIndustry && matchesSearch && matchesCategory;
-  }).map(useCase => ({
-    ...useCase,
-    isAiRecommended: false
-  }));
-
-  // Combine all use cases
-  const allUseCases = [
-    ...aiUseCases,
-    ...filteredRegularUseCases.filter(regularUseCase => 
-      !aiUseCases.some(aiUseCase => 
-        aiUseCase.title.toLowerCase().includes(regularUseCase.title.toLowerCase().split(' ')[0]) ||
-        regularUseCase.title.toLowerCase().includes(aiUseCase.title.toLowerCase().split(' ')[0])
-      )
-    )
-  ];
 
   // Create CSV content
   const headers = [
@@ -58,6 +34,9 @@ export const exportToExcel = (
     'Timeline',
     'Cost Savings',
     'Industries',
+    'Base Version',
+    'Release Version',
+    'Required Process',
     'AI Recommended'
   ];
 
@@ -71,12 +50,12 @@ export const exportToExcel = (
     ...(customerAnalysis?.companyDetails?.ifsVersion ? [[`IFS Version: ${customerAnalysis.companyDetails.ifsVersion}`]] : []),
     ...(customerAnalysis?.companyDetails?.softwareReleaseVersion ? [[`Software Release: ${customerAnalysis.companyDetails.softwareReleaseVersion}`]] : []),
     [`Generated: ${new Date().toLocaleDateString()}`],
-    [`Total Recommendations: ${allUseCases.length}`],
+    [`Total Recommendations: ${aiUseCases.length}`],
     [],
     // Data headers
     headers,
     // Data rows
-    ...allUseCases.map(useCase => [
+    ...aiUseCases.map(useCase => [
       useCase.title,
       useCase.description,
       useCase.category.replace('-', ' '),
@@ -85,6 +64,9 @@ export const exportToExcel = (
       useCase.timeline,
       useCase.costSavings || 'TBD',
       useCase.industries.join(', '),
+      useCase.baseVersion,
+      useCase.releaseVersion,
+      useCase.requiredProcess,
       useCase.isAiRecommended ? 'Yes' : 'No'
     ])
   ].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');

@@ -1,3 +1,4 @@
+import { isExistingUseCase } from "./useCaseUtils";
 
 // Function to get use case mapping from embedded Excel data
 async function getUseCaseMappingFromRAG(useCaseName: string, openAIApiKey?: string, supabase?: any) {
