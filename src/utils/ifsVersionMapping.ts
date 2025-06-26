@@ -1,4 +1,3 @@
-
 // IFS Version and Module Mapping Utilities - Using Embedded Excel Data
 export interface IFSVersionInfo {
   baseVersion: string;
@@ -13,16 +12,31 @@ export interface IFSCoreModule {
   description: string;
   minVersion: string;
   mlCapabilities: string[];
+  primaryIndustry?: string;
+  releaseVersion?: string;
+  baseIfsVersion?: string;
 }
 
-// Get IFS module and version data from embedded Excel sheet
-async function getEmbeddedMappingData(supabase: any, openAIApiKey?: string): Promise<any> {
+// Cache for embedded data to avoid repeated API calls
+let cachedEmbeddedData: any = null;
+let cachedModules: Record<string, IFSCoreModule> = {};
+
+// Get IFS module and version data from embedded Excel sheet with industry matching
+async function getEmbeddedMappingData(
+  supabase: any, 
+  openAIApiKey?: string,
+  primaryIndustry?: string,
+  releaseVersion?: string,
+  baseIfsVersion?: string
+): Promise<any> {
   try {
     if (!openAIApiKey || !supabase) {
       return null;
     }
 
-    // Create embedding for IFS module and version mapping query
+    // Create embedding for more specific search including customer details
+    const searchQuery = `IFS modules AI ML capabilities version mapping ${primaryIndustry || ''} ${releaseVersion || ''} ${baseIfsVersion || ''} core modules manufacturing SCM CRM EAM finance HCM project management`;
+    
     const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
       method: 'POST',
       headers: {
@@ -30,7 +44,7 @@ async function getEmbeddedMappingData(supabase: any, openAIApiKey?: string): Pro
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        input: 'IFS modules AI ML capabilities version mapping core modules manufacturing SCM CRM EAM finance HCM project management',
+        input: searchQuery,
         model: 'text-embedding-ada-002',
       }),
     });
@@ -46,7 +60,7 @@ async function getEmbeddedMappingData(supabase: any, openAIApiKey?: string): Pro
     const { data: searchResults, error } = await supabase.rpc('search_embeddings', {
       query_embedding: queryEmbedding,
       match_threshold: 0.7,
-      match_count: 10
+      match_count: 15 // Increased to get more comprehensive results
     });
 
     if (error || !searchResults || searchResults.length === 0) {
@@ -60,13 +74,27 @@ async function getEmbeddedMappingData(supabase: any, openAIApiKey?: string): Pro
   }
 }
 
-// Parse embedded Excel data to extract IFS module information
-function parseEmbeddedModuleData(embeddedData: any[]): Record<string, IFSCoreModule> {
+// Parse embedded Excel data to extract IFS module information with customer-specific matching
+function parseEmbeddedModuleData(
+  embeddedData: any[], 
+  primaryIndustry?: string,
+  releaseVersion?: string,
+  baseIfsVersion?: string
+): Record<string, IFSCoreModule> {
   const modules: Record<string, IFSCoreModule> = {};
   
   // Extract module information from embedded Excel data
   embeddedData.forEach(chunk => {
     const text = chunk.chunk_text.toLowerCase();
+    
+    // Check if this chunk is relevant to the customer's industry and version
+    const industryMatch = !primaryIndustry || text.includes(primaryIndustry.toLowerCase());
+    const versionMatch = !releaseVersion || text.includes(releaseVersion) || text.includes(baseIfsVersion || '');
+    
+    // Only process if it matches customer criteria
+    if (!industryMatch && !versionMatch && primaryIndustry) {
+      return; // Skip if not relevant to customer
+    }
     
     // Look for module patterns in the embedded data
     if (text.includes('manufacturing') || text.includes('manuf')) {
@@ -74,8 +102,11 @@ function parseEmbeddedModuleData(embeddedData: any[]): Record<string, IFSCoreMod
         moduleCode: 'MANUF',
         moduleName: 'Manufacturing',
         description: 'Production planning, scheduling, and shop floor management',
-        minVersion: extractVersionFromText(text) || '22.1',
-        mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'quality-control', 'production-optimization'])
+        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.1',
+        mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'quality-control', 'production-optimization']),
+        primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
+        releaseVersion: releaseVersion,
+        baseIfsVersion: baseIfsVersion
       };
     }
     
@@ -84,8 +115,11 @@ function parseEmbeddedModuleData(embeddedData: any[]): Record<string, IFSCoreMod
         moduleCode: 'SCM',
         moduleName: 'Supply Chain Management',
         description: 'Procurement, inventory, and logistics management',
-        minVersion: extractVersionFromText(text) || '22.2',
-        mlCapabilities: extractCapabilitiesFromText(text, ['demand-forecasting', 'inventory-optimization', 'supplier-analytics'])
+        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.2',
+        mlCapabilities: extractCapabilitiesFromText(text, ['demand-forecasting', 'inventory-optimization', 'supplier-analytics']),
+        primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
+        releaseVersion: releaseVersion,
+        baseIfsVersion: baseIfsVersion
       };
     }
     
@@ -94,8 +128,11 @@ function parseEmbeddedModuleData(embeddedData: any[]): Record<string, IFSCoreMod
         moduleCode: 'CRM',
         moduleName: 'Customer Relationship Management',
         description: 'Sales, marketing, and customer service',
-        minVersion: extractVersionFromText(text) || '23.1',
-        mlCapabilities: extractCapabilitiesFromText(text, ['customer-analytics', 'sentiment-analysis', 'lead-scoring'])
+        minVersion: extractVersionFromText(text) || baseIfsVersion || '23.1',
+        mlCapabilities: extractCapabilitiesFromText(text, ['customer-analytics', 'sentiment-analysis', 'lead-scoring']),
+        primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
+        releaseVersion: releaseVersion,
+        baseIfsVersion: baseIfsVersion
       };
     }
     
@@ -104,8 +141,11 @@ function parseEmbeddedModuleData(embeddedData: any[]): Record<string, IFSCoreMod
         moduleCode: 'EAM',
         moduleName: 'Enterprise Asset Management',
         description: 'Asset lifecycle and maintenance management',
-        minVersion: extractVersionFromText(text) || '22.1',
-        mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'anomaly-detection', 'asset-optimization'])
+        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.1',
+        mlCapabilities: extractCapabilitiesFromText(text, ['predictive-maintenance', 'anomaly-detection', 'asset-optimization']),
+        primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
+        releaseVersion: releaseVersion,
+        baseIfsVersion: baseIfsVersion
       };
     }
     
@@ -114,8 +154,11 @@ function parseEmbeddedModuleData(embeddedData: any[]): Record<string, IFSCoreMod
         moduleCode: 'FINANCE',
         moduleName: 'Financial Management',
         description: 'Accounting, budgeting, and financial reporting',
-        minVersion: extractVersionFromText(text) || '22.2',
-        mlCapabilities: extractCapabilitiesFromText(text, ['fraud-detection', 'financial-forecasting', 'automated-classification'])
+        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.2',
+        mlCapabilities: extractCapabilitiesFromText(text, ['fraud-detection', 'financial-forecasting', 'automated-classification']),
+        primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
+        releaseVersion: releaseVersion,
+        baseIfsVersion: baseIfsVersion
       };
     }
     
@@ -124,8 +167,11 @@ function parseEmbeddedModuleData(embeddedData: any[]): Record<string, IFSCoreMod
         moduleCode: 'HCM',
         moduleName: 'Human Capital Management',
         description: 'HR processes and workforce management',
-        minVersion: extractVersionFromText(text) || '23.1',
-        mlCapabilities: extractCapabilitiesFromText(text, ['employee-analytics', 'recruitment-optimization', 'performance-prediction'])
+        minVersion: extractVersionFromText(text) || baseIfsVersion || '23.1',
+        mlCapabilities: extractCapabilitiesFromText(text, ['employee-analytics', 'recruitment-optimization', 'performance-prediction']),
+        primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
+        releaseVersion: releaseVersion,
+        baseIfsVersion: baseIfsVersion
       };
     }
     
@@ -134,8 +180,11 @@ function parseEmbeddedModuleData(embeddedData: any[]): Record<string, IFSCoreMod
         moduleCode: 'PROJECT',
         moduleName: 'Project Management',
         description: 'Project planning, execution, and portfolio management',
-        minVersion: extractVersionFromText(text) || '22.2',
-        mlCapabilities: extractCapabilitiesFromText(text, ['project-risk-analysis', 'resource-optimization', 'timeline-prediction'])
+        minVersion: extractVersionFromText(text) || baseIfsVersion || '22.2',
+        mlCapabilities: extractCapabilitiesFromText(text, ['project-risk-analysis', 'resource-optimization', 'timeline-prediction']),
+        primaryIndustry: extractIndustryFromText(text) || primaryIndustry,
+        releaseVersion: releaseVersion,
+        baseIfsVersion: baseIfsVersion
       };
     }
   });
@@ -150,6 +199,17 @@ function extractVersionFromText(text: string): string | null {
   return matches ? matches[0] : null;
 }
 
+// Extract industry information from embedded text
+function extractIndustryFromText(text: string): string | null {
+  const industries = ['manufacturing', 'healthcare', 'retail', 'finance', 'automotive', 'energy', 'aerospace', 'construction'];
+  for (const industry of industries) {
+    if (text.includes(industry)) {
+      return industry;
+    }
+  }
+  return null;
+}
+
 // Extract capabilities from embedded text
 function extractCapabilitiesFromText(text: string, possibleCapabilities: string[]): string[] {
   const capabilities: string[] = [];
@@ -161,32 +221,38 @@ function extractCapabilitiesFromText(text: string, possibleCapabilities: string[
   return capabilities;
 }
 
-// Cache for embedded data to avoid repeated API calls
-let cachedEmbeddedData: any = null;
-let cachedModules: Record<string, IFSCoreModule> = {};
-
-// Get recommended IFS modules for a use case using embedded data
+// Get recommended IFS modules for a use case with customer-specific matching
 export async function getRecommendedModules(
   useCaseCategory: string, 
   supabase?: any, 
-  openAIApiKey?: string
+  openAIApiKey?: string,
+  primaryIndustry?: string,
+  releaseVersion?: string,
+  baseIfsVersion?: string
 ): Promise<IFSCoreModule[]> {
   try {
-    // Try to get data from embedded Excel sheet first
-    if (supabase && openAIApiKey && !cachedEmbeddedData) {
-      cachedEmbeddedData = await getEmbeddedMappingData(supabase, openAIApiKey);
-      if (cachedEmbeddedData) {
-        cachedModules = parseEmbeddedModuleData(cachedEmbeddedData);
+    // Try to get data from embedded Excel sheet with customer-specific criteria
+    const cacheKey = `${primaryIndustry}-${releaseVersion}-${baseIfsVersion}`;
+    
+    if (supabase && openAIApiKey && (!cachedEmbeddedData || !cachedEmbeddedData[cacheKey])) {
+      const embeddedData = await getEmbeddedMappingData(supabase, openAIApiKey, primaryIndustry, releaseVersion, baseIfsVersion);
+      if (embeddedData) {
+        cachedEmbeddedData = { [cacheKey]: embeddedData };
+        cachedModules = parseEmbeddedModuleData(embeddedData, primaryIndustry, releaseVersion, baseIfsVersion);
       }
     }
     
-    // Use embedded data if available
+    // Use embedded data if available and matches customer criteria
     if (Object.keys(cachedModules).length > 0) {
       const relevantModules: IFSCoreModule[] = [];
       
-      // Map use case categories to modules based on embedded data
+      // Filter modules based on customer criteria and use case category
       Object.values(cachedModules).forEach(module => {
-        if (module.mlCapabilities.includes(useCaseCategory)) {
+        const industryMatch = !primaryIndustry || !module.primaryIndustry || module.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase());
+        const versionMatch = !releaseVersion || !module.releaseVersion || module.releaseVersion === releaseVersion;
+        const capabilityMatch = module.mlCapabilities.includes(useCaseCategory);
+        
+        if ((industryMatch || versionMatch) && capabilityMatch) {
           relevantModules.push(module);
         }
       });
@@ -237,29 +303,43 @@ export function isMLCapabilitySupported(moduleCode: string, capability: string):
   return module ? module.mlCapabilities.includes(capability) : false;
 }
 
-// Get version compatibility for ML capabilities using embedded data
-export function getVersionCompatibility(baseVersion: string, capability: string): {
+// Get version compatibility with customer-specific details
+export function getVersionCompatibility(
+  baseVersion: string, 
+  capability: string,
+  primaryIndustry?: string,
+  releaseVersion?: string
+): {
   compatible: boolean;
   requiredVersion?: string;
   upgradeNeeded: boolean;
+  industrySupported?: boolean;
 } {
   try {
     const currentVersion = parseFloat(baseVersion);
     
-    // Check embedded data for version requirements
+    // Check embedded data for version requirements with industry context
     if (Object.keys(cachedModules).length > 0) {
-      const relevantModules = Object.values(cachedModules).filter(module => 
-        module.mlCapabilities.includes(capability)
-      );
+      const relevantModules = Object.values(cachedModules).filter(module => {
+        const capabilityMatch = module.mlCapabilities.includes(capability);
+        const industryMatch = !primaryIndustry || !module.primaryIndustry || 
+          module.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase());
+        return capabilityMatch && industryMatch;
+      });
       
       if (relevantModules.length > 0) {
         const requiredVersions = relevantModules.map(m => parseFloat(m.minVersion));
         const minRequiredVersion = Math.min(...requiredVersions);
+        const industrySupported = relevantModules.some(m => 
+          !primaryIndustry || !m.primaryIndustry || 
+          m.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase())
+        );
         
         return {
           compatible: currentVersion >= minRequiredVersion,
           requiredVersion: minRequiredVersion.toString(),
-          upgradeNeeded: currentVersion < minRequiredVersion
+          upgradeNeeded: currentVersion < minRequiredVersion,
+          industrySupported
         };
       }
     }
@@ -272,7 +352,7 @@ export function getVersionCompatibility(baseVersion: string, capability: string)
       upgradeNeeded: currentVersion < minVersion
     };
   } catch (error) {
-    return { compatible: false, upgradeNeeded: false };
+    return { compatible: false, upgradeNeeded: false, industrySupported: false };
   }
 }
 

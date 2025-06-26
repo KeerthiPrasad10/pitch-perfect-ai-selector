@@ -19,17 +19,30 @@ export const processDocumentUseCases = async (
       .map(async (useCase, index) => {
         const normalizedCategory = normalizeUseCaseCategory(useCase?.category || 'general');
         
-        // Get modules from embedded Excel data
-        const recommendedModules = await getRecommendedModules(normalizedCategory, supabase, openAIApiKey);
-        const primaryModule = recommendedModules[0];
-        
-        // Get customer's IFS version info from embedded data or customer analysis
+        // Get customer's IFS details for matching
         const customerVersionInfo = customerAnalysis?.companyDetails;
+        const primaryIndustry = customerVersionInfo?.primaryIndustry || customerVersionInfo?.industry || selectedIndustry;
         const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.releaseVersion || '22.1';
         const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || '22.1';
         
-        // Check version compatibility using embedded data
-        const compatibility = getVersionCompatibility(baseVersion, normalizedCategory);
+        // Get modules from embedded Excel data with customer-specific matching
+        const recommendedModules = await getRecommendedModules(
+          normalizedCategory, 
+          supabase, 
+          openAIApiKey,
+          primaryIndustry,
+          releaseVersion,
+          baseVersion
+        );
+        const primaryModule = recommendedModules[0];
+        
+        // Check version compatibility using embedded data with customer context
+        const compatibility = getVersionCompatibility(
+          baseVersion, 
+          normalizedCategory, 
+          primaryIndustry, 
+          releaseVersion
+        );
         
         return {
           id: `doc-${index}`,
@@ -52,13 +65,16 @@ export const processDocumentUseCases = async (
           isExisting: isExistingUseCase(useCase?.title || 'Document Use Case', currentUseCases),
           baseVersion: baseVersion,
           releaseVersion: releaseVersion,
+          primaryIndustry: primaryIndustry,
           requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
           coreModules: recommendedModules.map(m => ({
             code: m.moduleCode,
             name: m.moduleName,
             compatible: compatibility.compatible,
             minVersion: m.minVersion,
-            description: m.description
+            description: m.description,
+            industryMatch: !primaryIndustry || !m.primaryIndustry || m.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase()),
+            versionMatch: !releaseVersion || !m.releaseVersion || m.releaseVersion === releaseVersion
           }))
         };
       })

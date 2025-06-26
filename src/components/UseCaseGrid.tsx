@@ -1,3 +1,4 @@
+
 import { Briefcase, FileText } from "lucide-react";
 import { UseCaseCard } from "./UseCaseCard";
 import { processDocumentUseCases, processRelatedIndustryUseCases } from "@/utils/useCaseProcessing";
@@ -37,6 +38,12 @@ export const UseCaseGrid = ({
       // Get OpenAI API key from environment or customer analysis
       const openAIApiKey = customerAnalysis?.openAIApiKey || process.env.OPENAI_API_KEY;
 
+      // Get customer's IFS details for matching
+      const customerVersionInfo = customerAnalysis?.companyDetails;
+      const primaryIndustry = customerVersionInfo?.primaryIndustry || customerVersionInfo?.industry || selectedIndustry;
+      const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.releaseVersion || '22.1';
+      const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || '22.1';
+
       // Only process factual use cases from documents (no AI generation)
       const documentUseCases = await processDocumentUseCases(
         aiRecommendations, 
@@ -48,24 +55,26 @@ export const UseCaseGrid = ({
         customerAnalysis
       );
 
-      // Add existing customer use cases as factual data with proper IFS version info from embedded Excel
+      // Add existing customer use cases as factual data with customer-specific IFS version info
       const existingUseCases = await Promise.all(
         currentUseCases.map(async (useCase: string, index: number) => {
           const normalizedCategory = normalizeUseCaseCategory('existing');
           
-          // Get modules from embedded Excel data
-          const recommendedModules = await getRecommendedModules(normalizedCategory, supabase, openAIApiKey);
+          // Get modules from embedded Excel data with customer-specific matching
+          const recommendedModules = await getRecommendedModules(
+            normalizedCategory, 
+            supabase, 
+            openAIApiKey,
+            primaryIndustry,
+            releaseVersion,
+            baseVersion
+          );
           const primaryModule = recommendedModules[0];
-          
-          // Get customer's IFS version info
-          const customerVersionInfo = customerAnalysis?.companyDetails;
-          const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.releaseVersion || 'Current';
-          const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || 'Current';
           
           return {
             id: `existing-${index}`,
             title: useCase,
-            description: `Active AI/ML solution currently implemented by ${customerName}. This use case is operational and generating business value.`,
+            description: `Active AI/ML solution currently implemented by ${customerName}. This use case is operational and generating business value in the ${primaryIndustry} industry.`,
             category: 'existing',
             implementation: 'Active Implementation',
             timeline: 'Currently Active',
@@ -83,6 +92,7 @@ export const UseCaseGrid = ({
             isExisting: true,
             baseVersion: baseVersion,
             releaseVersion: releaseVersion,
+            primaryIndustry: primaryIndustry,
             requiredProcess: primaryModule ? `${primaryModule.moduleCode} (${primaryModule.moduleName})` : 'Core IFS Platform',
             status: 'Active',
             coreModules: recommendedModules.map(m => ({
@@ -90,7 +100,9 @@ export const UseCaseGrid = ({
               name: m.moduleName,
               compatible: true, // Since it's already active
               minVersion: m.minVersion,
-              description: m.description
+              description: m.description,
+              industryMatch: !primaryIndustry || !m.primaryIndustry || m.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase()),
+              versionMatch: !releaseVersion || !m.releaseVersion || m.releaseVersion === releaseVersion
             }))
           };
         })
@@ -132,11 +144,15 @@ export const UseCaseGrid = ({
     );
   }
 
+  // Get customer details for display
+  const customerVersionInfo = customerAnalysis?.companyDetails;
+  const primaryIndustry = customerVersionInfo?.primaryIndustry || customerVersionInfo?.industry || selectedIndustry;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
-          {allUseCases.length} Factual AI Solution{allUseCases.length !== 1 ? 's' : ''} for {customerName}
+          {allUseCases.length} Matched AI Solution{allUseCases.length !== 1 ? 's' : ''} for {customerName}
           {(existingUseCases.length > 0 || documentUseCases.length > 0) && (
             <span className="ml-2 text-sm text-purple-600 font-normal">
               ({existingUseCases.length} active implementations, {documentUseCases.length} from documents)
@@ -145,16 +161,18 @@ export const UseCaseGrid = ({
         </h2>
         <div className="text-sm text-gray-600 flex items-center space-x-2">
           <FileText className="h-4 w-4" />
-          <span>Data from embedded Excel sheet</span>
+          <span>Matched by: {primaryIndustry} • {customerVersionInfo?.releaseVersion} • {customerVersionInfo?.baseIfsVersion}</span>
         </div>
       </div>
 
       {allUseCases.length === 0 && (
         <div className="text-center py-12">
           <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No factual AI solutions found</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No matching AI solutions found</h3>
           <p className="text-gray-600">
-            Upload documents containing specific AI use cases or analyze an existing IFS customer to see factual implementations.
+            No ML use cases found that match the combination of {primaryIndustry} industry, 
+            {customerVersionInfo?.releaseVersion || 'unknown'} release version, and 
+            {customerVersionInfo?.baseIfsVersion || 'unknown'} base IFS version.
           </p>
         </div>
       )}

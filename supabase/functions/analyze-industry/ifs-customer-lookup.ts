@@ -20,7 +20,8 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
         ifs_version: exactMatch.ifs_version,
         deployment_type: exactMatch.ifs_version, // Cloud or Remote
         release_version: exactMatch.ifs_software_release_version || exactMatch.software_release_version,
-        base_ifs_version: extractBaseVersion(exactMatch.ifs_software_release_version || exactMatch.software_release_version)
+        base_ifs_version: extractBaseVersion(exactMatch.ifs_software_release_version || exactMatch.software_release_version),
+        primary_industry: exactMatch.primary_industry || exactMatch.industry // Add primary industry mapping
       };
     }
 
@@ -42,7 +43,8 @@ export async function checkIFSCustomer(companyName: string, supabase: any) {
         ifs_version: match.ifs_version,
         deployment_type: match.ifs_version, // Cloud or Remote
         release_version: match.ifs_software_release_version || match.software_release_version,
-        base_ifs_version: extractBaseVersion(match.ifs_software_release_version || match.software_release_version)
+        base_ifs_version: extractBaseVersion(match.ifs_software_release_version || match.software_release_version),
+        primary_industry: match.primary_industry || match.industry // Add primary industry mapping
       };
     }
 
