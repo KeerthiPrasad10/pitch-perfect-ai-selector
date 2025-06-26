@@ -1,5 +1,6 @@
+
 import { isExistingUseCase } from "./useCaseUtils";
-import { getRecommendedModules, normalizeUseCaseCategory, getVersionCompatibility, getCustomerInfo } from "./ifs";
+import { getRecommendedModules, normalizeUseCaseCategory, getVersionCompatibility, getCustomerInfo, getCompatibleUseCases } from "./ifs";
 
 export const processDocumentUseCases = async (
   aiRecommendations: any[],
@@ -10,7 +11,7 @@ export const processDocumentUseCases = async (
   supabase?: any,
   customerAnalysis?: any
 ) => {
-  // Get customer information from database
+  // Get customer information from database with enhanced matching
   const customerInfo = await getCustomerInfo(customerName);
   
   // Use database info if available, otherwise fall back to analysis
@@ -60,6 +61,11 @@ export const processDocumentUseCases = async (
           releaseVersion
         );
         
+        // Determine industry relevance
+        const industryRelevance = primaryModule.primaryIndustry && 
+          primaryModule.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase()) 
+          ? 'primary' : 'cross-industry';
+        
         return {
           id: `doc-${index}`,
           title: useCase?.title || 'Document Use Case',
@@ -73,7 +79,8 @@ export const processDocumentUseCases = async (
           ragEnhanced: false,
           ragSources: useCase?.ragSources || [],
           sources: useCase?.sources || [],
-          industryRelevance: 'primary',
+          industryRelevance: industryRelevance,
+          sourceIndustry: primaryModule.primaryIndustry || 'General',
           targetCustomer: customerName,
           implementationJustification: useCase?.implementationJustification || 'Based on factual information found in uploaded documents',
           timelineJustification: useCase?.timelineJustification || 'Timeline based on project details described in documents',
@@ -100,10 +107,15 @@ export const processDocumentUseCases = async (
   // Filter out null values (use cases without ML capabilities)
   const validUseCases = processedUseCases.filter(useCase => useCase !== null);
 
-  // Sort to put existing use cases first
+  // Sort to put existing use cases first, then by industry relevance
   return validUseCases.sort((a, b) => {
     if (a.isExisting && !b.isExisting) return -1;
     if (!a.isExisting && b.isExisting) return 1;
+    
+    // Then sort by industry relevance
+    if (a.industryRelevance === 'primary' && b.industryRelevance !== 'primary') return -1;
+    if (a.industryRelevance !== 'primary' && b.industryRelevance === 'primary') return 1;
+    
     return 0;
   });
 };
@@ -121,7 +133,7 @@ export const processCurrentUseCases = async (
     return [];
   }
 
-  // Get customer information from database
+  // Get customer information from database with enhanced matching
   const customerInfo = await getCustomerInfo(customerName);
   
   const customerVersionInfo = customerInfo || customerAnalysis?.companyDetails;
@@ -200,6 +212,98 @@ export const processCurrentUseCases = async (
 
   // Filter out null values (use cases without ML capabilities)
   return validatedUseCases.filter(useCase => useCase !== null);
+};
+
+// New function to get additional compatible use cases when industry doesn't match exactly
+export const getAdditionalCompatibleUseCases = async (
+  customerName: string,
+  selectedIndustry: string,
+  currentUseCases: string[],
+  openAIApiKey?: string,
+  supabase?: any,
+  customerAnalysis?: any
+) => {
+  // Get customer information from database
+  const customerInfo = await getCustomerInfo(customerName);
+  
+  const customerVersionInfo = customerInfo || customerAnalysis?.companyDetails;
+  const primaryIndustry = customerVersionInfo?.primaryIndustry || customerVersionInfo?.industry || selectedIndustry;
+  const baseVersion = customerVersionInfo?.baseIfsVersion || customerVersionInfo?.ifsVersion || 'Cloud';
+  const releaseVersion = customerVersionInfo?.releaseVersion || customerVersionInfo?.softwareReleaseVersion || '22.1';
+
+  console.log('Getting additional compatible use cases for:', {
+    customerName,
+    primaryIndustry,
+    baseVersion,
+    releaseVersion
+  });
+
+  // Get all compatible modules for this customer's version
+  const compatibleModules = await getCompatibleUseCases(releaseVersion, baseVersion, primaryIndustry);
+  
+  if (compatibleModules.length === 0) {
+    return [];
+  }
+
+  // Transform modules into use case format
+  const additionalUseCases = compatibleModules
+    .filter(module => module.mlCapabilities && module.mlCapabilities.length > 0)
+    .flatMap((module, moduleIndex) => 
+      module.mlCapabilities.map((capability, capIndex) => {
+        const industryRelevance = module.primaryIndustry && 
+          module.primaryIndustry.toLowerCase().includes(primaryIndustry.toLowerCase()) 
+          ? 'primary' : 'cross-industry';
+        
+        return {
+          id: `compatible-${moduleIndex}-${capIndex}`,
+          title: `${capability.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} Solution`,
+          description: `${capability.replace('-', ' ')} capability available through ${module.moduleName}. Compatible with ${baseVersion} deployment on release ${releaseVersion}.`,
+          category: capability,
+          implementation: 'Ready for Implementation',
+          timeline: 'Can be implemented immediately',
+          industries: module.primaryIndustry ? [module.primaryIndustry] : ['General'],
+          costSavings: 'Potential ROI based on module capabilities',
+          isFromDocuments: false,
+          ragEnhanced: false,
+          ragSources: [],
+          sources: [],
+          industryRelevance: industryRelevance,
+          sourceIndustry: module.primaryIndustry || 'General',
+          targetCustomer: customerName,
+          implementationJustification: `Available through ${module.moduleName} module`,
+          timelineJustification: 'Module already supports this capability',
+          savingsJustification: 'Standard ROI expectations for this capability type',
+          isExisting: isExistingUseCase(capability, currentUseCases),
+          baseVersion: baseVersion,
+          releaseVersion: releaseVersion,
+          primaryIndustry: primaryIndustry,
+          requiredProcess: `${module.moduleCode} - ${module.moduleName}`,
+          coreModules: [{
+            code: module.moduleCode,
+            name: module.moduleName,
+            compatible: true,
+            minVersion: module.minVersion,
+            description: module.description,
+            industryMatch: industryRelevance === 'primary',
+            versionMatch: true,
+            deploymentMatch: true
+          }]
+        };
+      })
+    )
+    // Remove duplicates based on capability
+    .filter((useCase, index, array) => 
+      index === array.findIndex(u => u.category === useCase.category)
+    )
+    // Sort by industry relevance
+    .sort((a, b) => {
+      if (a.industryRelevance === 'primary' && b.industryRelevance !== 'primary') return -1;
+      if (a.industryRelevance !== 'primary' && b.industryRelevance === 'primary') return 1;
+      return 0;
+    });
+
+  console.log(`Found ${additionalUseCases.length} additional compatible use cases`);
+  return additionalUseCases;
 };
 
 export const processRelatedIndustryUseCases = async (

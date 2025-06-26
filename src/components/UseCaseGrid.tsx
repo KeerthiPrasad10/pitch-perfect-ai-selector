@@ -1,7 +1,7 @@
 
 import { Briefcase, FileText, Database } from "lucide-react";
 import { UseCaseCard } from "./UseCaseCard";
-import { processDocumentUseCases, processCurrentUseCases } from "@/utils/useCaseProcessing";
+import { processDocumentUseCases, processCurrentUseCases, getAdditionalCompatibleUseCases } from "@/utils/useCaseProcessing";
 import { useEffect, useState } from "react";
 import { normalizeUseCaseCategory, getRecommendedModules, getCustomerInfo } from "@/utils/ifs";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +33,7 @@ export const UseCaseGrid = ({
     const processUseCases = async () => {
       setIsLoading(true);
       
-      // Get customer information from database first
+      // Get customer information from database with enhanced matching
       const dbCustomerInfo = customerName ? await getCustomerInfo(customerName) : null;
       setCustomerInfo(dbCustomerInfo);
       
@@ -43,7 +43,7 @@ export const UseCaseGrid = ({
       // Get OpenAI API key from customer analysis
       const openAIApiKey = customerAnalysis?.openAIApiKey;
 
-      // Only process factual use cases from documents (no AI generation)
+      // Process factual use cases from documents
       const documentUseCases = await processDocumentUseCases(
         aiRecommendations, 
         selectedIndustry, 
@@ -64,8 +64,21 @@ export const UseCaseGrid = ({
         customerAnalysis
       );
 
+      // Get additional compatible use cases based on customer's version info
+      const additionalUseCases = dbCustomerInfo ? await getAdditionalCompatibleUseCases(
+        customerName || '',
+        selectedIndustry,
+        currentUseCases,
+        openAIApiKey,
+        supabase,
+        customerAnalysis
+      ) : [];
+
+      // Combine all use cases
+      const combinedUseCases = [...existingUseCases, ...documentUseCases, ...additionalUseCases];
+
       // Filter based on search and category
-      const filteredUseCases = [...existingUseCases, ...documentUseCases].filter(useCase => {
+      const filteredUseCases = combinedUseCases.filter(useCase => {
         const matchesSearch = !searchTerm || 
           useCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           useCase.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -73,10 +86,19 @@ export const UseCaseGrid = ({
         return matchesSearch && matchesCategory;
       });
 
-      // Sort to ensure existing use cases are always first
+      // Sort to ensure existing use cases are first, then by industry relevance
       const sortedUseCases = filteredUseCases.sort((a, b) => {
         if (a.isExisting && !b.isExisting) return -1;
         if (!a.isExisting && b.isExisting) return 1;
+        
+        // Then by industry relevance
+        if (a.industryRelevance === 'primary' && b.industryRelevance !== 'primary') return -1;
+        if (a.industryRelevance !== 'primary' && b.industryRelevance === 'primary') return 1;
+        
+        // Then by source (documents before additional)
+        if (a.isFromDocuments && !b.isFromDocuments) return -1;
+        if (!a.isFromDocuments && b.isFromDocuments) return 1;
+        
         return 0;
       });
 
@@ -89,6 +111,7 @@ export const UseCaseGrid = ({
 
   const documentUseCases = allUseCases.filter(uc => uc.isFromDocuments);
   const existingUseCases = allUseCases.filter(uc => uc.isExisting);
+  const additionalUseCases = allUseCases.filter(uc => !uc.isFromDocuments && !uc.isExisting);
 
   if (isLoading) {
     return (
@@ -109,9 +132,9 @@ export const UseCaseGrid = ({
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
           {allUseCases.length} Validated AI Solution{allUseCases.length !== 1 ? 's' : ''} for {customerName}
-          {(existingUseCases.length > 0 || documentUseCases.length > 0) && (
+          {(existingUseCases.length > 0 || documentUseCases.length > 0 || additionalUseCases.length > 0) && (
             <span className="ml-2 text-sm text-purple-600 font-normal">
-              ({existingUseCases.length} active implementations, {documentUseCases.length} from documents)
+              ({existingUseCases.length} active, {documentUseCases.length} from documents, {additionalUseCases.length} compatible)
             </span>
           )}
         </h2>
@@ -135,13 +158,13 @@ export const UseCaseGrid = ({
           <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No validated AI solutions found</h3>
           <p className="text-gray-600">
-            No ML use cases found with confirmed capabilities in the database that match the combination of {primaryIndustry} industry, 
+            No ML use cases found with confirmed capabilities in the database for the combination of {primaryIndustry} industry, 
             {displayCustomerInfo?.releaseVersion || 'unknown'} release version, and 
             {displayCustomerInfo?.baseIfsVersion || 'unknown'} deployment type.
           </p>
           {!customerInfo && (
             <p className="text-sm text-blue-600 mt-2">
-              Customer not found in database. Results based on AI analysis only.
+              Customer not found in database. Results based on AI analysis and version compatibility only.
             </p>
           )}
         </div>

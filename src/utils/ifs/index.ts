@@ -6,5 +6,5 @@ export * from './versionService';
 export * from './useCaseNormalizer';
 export * from './embeddedDataService';
 
-// Re-export the new customer info function
-export { getCustomerInfo } from './moduleService';
+// Re-export the enhanced customer info and compatibility functions
+export { getCustomerInfo, getCompatibleUseCases } from './moduleService';
