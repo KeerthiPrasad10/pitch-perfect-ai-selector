@@ -35,8 +35,8 @@ export const UseCaseGrid = ({
       // Get current use cases from customer analysis
       const currentUseCases = customerAnalysis?.currentUseCases || [];
       
-      // Get OpenAI API key from environment or customer analysis
-      const openAIApiKey = customerAnalysis?.openAIApiKey || process.env.OPENAI_API_KEY;
+      // Get OpenAI API key from customer analysis only (not from process.env in browser)
+      const openAIApiKey = customerAnalysis?.openAIApiKey;
 
       // Get customer's IFS details for matching
       const customerVersionInfo = customerAnalysis?.companyDetails;
